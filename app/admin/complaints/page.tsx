@@ -3,25 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import {
-  Search,
-  Filter,
-  X,
-  Eye,
-  UserPlus,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Clock,
-  MapPin,
-  Calendar,
-  User,
-  ChevronDown,
-  MoreHorizontal,
-  MessageSquare,
-  History,
-  Send,
-} from "lucide-react"
+import { Search, ListFilter as Filter, X, Eye, UserPlus, CircleCheck as CheckCircle2, Circle as XCircle, TriangleAlert as AlertTriangle, Clock, MapPin, Calendar, User, ChevronDown, MoveHorizontal as MoreHorizontal, MessageSquare, History, Send } from "lucide-react"
 import { toast } from "sonner"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
@@ -68,6 +50,8 @@ import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { currentUser, complaints, type Status, type Priority, type Complaint, categoryBreakdown } from "@/lib/data"
+
+export const dynamic = 'force-dynamic'
 
 type SortOption = "newest" | "oldest" | "priority-high" | "priority-low" | "status"
 

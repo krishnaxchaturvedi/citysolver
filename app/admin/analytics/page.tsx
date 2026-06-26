@@ -1,17 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Download,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Activity,
-  Users,
-  Clock,
-} from "lucide-react"
+import { TrendingUp, TrendingDown, Calendar, Download, ChartBar as BarChart3, ChartPie as PieChartIcon, Activity, Users, Clock } from "lucide-react"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { adminNav } from "@/components/dashboard/nav-config"
@@ -29,29 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  LineChart,
-  Line,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-} from "recharts"
-import { currentUser, monthlyReports, categoryBreakdown, priorityDistribution, hotspots, resolutionTrend } from "@/lib/data"
+import { currentUser, categoryBreakdown, priorityDistribution, hotspots, resolutionTrend } from "@/lib/data"
+
+export const dynamic = 'force-dynamic'
 
 const chartConfig = {
   complaints: { label: "Complaints", color: "var(--chart-1)" },
@@ -83,16 +53,6 @@ const dailyComplaints = [
   { day: "Sun", complaints: 22, resolved: 20 },
 ]
 
-const categoryColors: Record<string, string> = {
-  "Pothole": "var(--chart-1)",
-  "Garbage": "var(--chart-2)",
-  "Streetlight": "var(--chart-3)",
-  "Water": "var(--chart-4)",
-  "Drainage": "var(--chart-5)",
-  "Dumping": "var(--primary)",
-  "Safety": "var(--destructive)",
-}
-
 const radarData = [
   { category: "Roads", score: 85 },
   { category: "Sanitation", score: 78 },
@@ -113,6 +73,11 @@ const satisfactionData = [
 
 export default function AdminAnalyticsPage() {
   const [timeRange, setTimeRange] = React.useState("6m")
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <DashboardShell
@@ -209,232 +174,231 @@ export default function AdminAnalyticsPage() {
           </Card>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="size-5" />
-                Daily Complaints
-              </CardTitle>
-              <CardDescription>Complaints received vs resolved this week</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyComplaints}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} />
-                    <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }} />
-                    <Bar dataKey="complaints" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="resolved" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-              <div className="mt-4 flex items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="size-3 rounded-full bg-primary" />
-                  <span className="text-muted-foreground">Received</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="size-3 rounded-full bg-success" />
-                  <span className="text-muted-foreground">Resolved</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {mounted && (
+          <>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="size-5" />
+                    Daily Complaints
+                  </CardTitle>
+                  <CardDescription>Complaints received vs resolved this week</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-64 w-full">
+                    <div className="flex h-64 items-center justify-center text-muted-foreground">
+                      Chart loading...
+                    </div>
+                  </ChartContainer>
+                  <div className="mt-4 flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="size-3 rounded-full bg-primary" />
+                      <span className="text-muted-foreground">Received</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="size-3 rounded-full bg-success" />
+                      <span className="text-muted-foreground">Resolved</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChartIcon className="size-5" />
-                Priority Distribution
-              </CardTitle>
-              <CardDescription>Complaints by priority level</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={pieChartConfig} className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={priorityDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {priorityDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChartIcon className="size-5" />
+                    Priority Distribution
+                  </CardTitle>
+                  <CardDescription>Complaints by priority level</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex h-64 items-center justify-center">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {priorityDistribution.map((item) => (
+                        <div key={item.name} className="flex items-center gap-2">
+                          <span className="size-3 rounded-full" style={{ backgroundColor: item.fill.includes('var') ? 'currentColor' : item.fill }} />
+                          <span>{item.name}: {item.value}</span>
+                        </div>
                       ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="size-5" />
-                Category Breakdown
-              </CardTitle>
-              <CardDescription>Complaints by issue category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryBreakdown} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} />
-                    <YAxis dataKey="category" type="category" stroke="var(--muted-foreground)" fontSize={12} width={80} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }} />
-                    <Bar dataKey="count" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Ward Hotspots</CardTitle>
-              <CardDescription>Areas with most complaints</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {hotspots.map((ward, i) => (
-                  <div key={ward.zone} className="flex items-center gap-3">
-                    <span className="flex size-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                      {i + 1}
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{ward.zone}</span>
-                        <span className="text-sm text-muted-foreground">{ward.reports}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${(ward.resolved / ward.reports) * 100}%` }}
-                        />
-                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="size-5" />
-                Resolution Trend
-              </CardTitle>
-              <CardDescription>Monthly resolution rate improvement</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={resolutionTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
-                    <YAxis stroke="var(--muted-foreground)" fontSize={12} domain={[60, 100]} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }} />
-                    <Line type="monotone" dataKey="rate" stroke="var(--chart-3)" strokeWidth={2} dot={{ fill: 'var(--chart-3)', strokeWidth: 2 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="size-5" />
-                Citizen Satisfaction
-              </CardTitle>
-              <CardDescription>Satisfaction score trend</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={satisfactionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
-                    <YAxis stroke="var(--muted-foreground)" fontSize={12} domain={[60, 100]} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }} />
-                    <Area type="monotone" dataKey="score" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.3} strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="size-5" />
-                Officer Performance
-              </CardTitle>
-              <CardDescription>Top performing field officers</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {officerPerformance.map((officer, i) => (
-                  <div key={officer.name} className="flex items-center gap-3">
-                    <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                      {i + 1}
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{officer.name}</span>
-                        <Badge variant="secondary">{officer.resolved} resolved</Badge>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="size-5" />
+                    Category Breakdown
+                  </CardTitle>
+                  <CardDescription>Complaints by issue category</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {categoryBreakdown.map((item) => (
+                      <div key={item.category} className="flex items-center gap-3">
+                        <span className="w-20 text-sm text-muted-foreground">{item.category}</span>
+                        <div className="flex-1 h-4 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full"
+                            style={{ width: `${(item.count / Math.max(...categoryBreakdown.map(c => c.count))) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium">{item.count}</span>
                       </div>
-                      <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{officer.department}</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-3" />
-                          {officer.avgTime}d avg
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ward Hotspots</CardTitle>
+                  <CardDescription>Areas with most complaints</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {hotspots.map((ward, i) => (
+                      <div key={ward.zone} className="flex items-center gap-3">
+                        <span className="flex size-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                          {i + 1}
                         </span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{ward.zone}</span>
+                            <span className="text-sm text-muted-foreground">{ward.reports}</span>
+                          </div>
+                          <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${(ward.resolved / ward.reports) * 100}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Department Performance</CardTitle>
-              <CardDescription>Performance across departments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="var(--border)" />
-                    <PolarAngleAxis dataKey="category" stroke="var(--muted-foreground)" fontSize={12} />
-                    <PolarRadiusAxis stroke="var(--muted-foreground)" fontSize={12} domain={[0, 100]} />
-                    <Radar name="Score" dataKey="score" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.3} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="size-5" />
+                    Resolution Trend
+                  </CardTitle>
+                  <CardDescription>Monthly resolution rate improvement</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {resolutionTrend.map((item) => (
+                      <div key={item.month} className="flex items-center gap-3">
+                        <span className="w-12 text-sm text-muted-foreground">{item.month}</span>
+                        <div className="flex-1 h-4 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-success rounded-full"
+                            style={{ width: `${item.rate}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium">{item.rate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="size-5" />
+                    Citizen Satisfaction
+                  </CardTitle>
+                  <CardDescription>Satisfaction score trend</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {satisfactionData.map((item) => (
+                      <div key={item.month} className="flex items-center gap-3">
+                        <span className="w-12 text-sm text-muted-foreground">{item.month}</span>
+                        <div className="flex-1 h-4 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-chart-2 rounded-full"
+                            style={{ width: `${item.score}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium">{item.score}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="size-5" />
+                    Officer Performance
+                  </CardTitle>
+                  <CardDescription>Top performing field officers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {officerPerformance.map((officer, i) => (
+                      <div key={officer.name} className="flex items-center gap-3">
+                        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                          {i + 1}
+                        </span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{officer.name}</span>
+                            <Badge variant="secondary">{officer.resolved} resolved</Badge>
+                          </div>
+                          <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{officer.department}</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="size-3" />
+                              {officer.avgTime}d avg
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Department Performance</CardTitle>
+                  <CardDescription>Performance across departments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {radarData.map((item) => (
+                      <div key={item.category} className="flex items-center gap-3">
+                        <span className="w-24 text-sm text-muted-foreground">{item.category}</span>
+                        <div className="flex-1 h-4 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-chart-1 rounded-full"
+                            style={{ width: `${item.score}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium">{item.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
       </div>
     </DashboardShell>
   )

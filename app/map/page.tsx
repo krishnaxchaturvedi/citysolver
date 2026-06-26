@@ -3,9 +3,11 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, Search, Filter, X, AlertTriangle, Eye, Layers } from "lucide-react"
+import { MapPin, Search, ListFilter as Filter, X, TriangleAlert as AlertTriangle, Eye, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { currentUser, complaints, type Status, type Priority, type CategoryKey, categories, priorityMeta, type Complaint } from "@/lib/data"
+
+export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

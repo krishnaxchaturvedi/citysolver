@@ -2,19 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import {
-  TrendingUp,
-  TrendingDown,
-  FileText,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Users,
-  Timer,
-  Smile,
-  ArrowRight,
-  BarChart3,
-} from "lucide-react"
+import { TrendingUp, TrendingDown, FileText, Clock, CircleCheck as CheckCircle2, TriangleAlert as AlertTriangle, Users, Timer, Smile, ArrowRight, ChartBar as BarChart3 } from "lucide-react"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { adminNav } from "@/components/dashboard/nav-config"
@@ -37,6 +25,8 @@ import {
 } from "@/components/ui/chart"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from "recharts"
 import { complaints, monthlyReports, priorityDistribution, categoryBreakdown, hotspots, currentUser } from "@/lib/data"
+
+export const dynamic = 'force-dynamic'
 
 const stats = [
   {

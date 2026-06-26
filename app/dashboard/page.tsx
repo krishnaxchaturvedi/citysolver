@@ -2,20 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import {
-  TrendingUp,
-  TrendingDown,
-  FileText,
-  Clock,
-  CheckCircle2,
-  Coins,
-  Trophy,
-  Percent,
-  PlusCircle,
-  Search,
-  Map,
-  ClipboardList,
-} from "lucide-react"
+import { TrendingUp, TrendingDown, FileText, Clock, CircleCheck as CheckCircle2, Coins, Trophy, Percent, CirclePlus as PlusCircle, Search, Map, ClipboardList } from "lucide-react"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
@@ -39,6 +26,8 @@ import {
 } from "@/components/ui/chart"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
 import { currentUser, complaints, monthlyReports, priorityDistribution } from "@/lib/data"
+
+export const dynamic = 'force-dynamic'
 
 const stats = [
   {

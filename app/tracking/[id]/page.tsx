@@ -4,26 +4,14 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Circle,
-  Clock,
-  MapPin,
-  Calendar,
-  User,
-  AlertTriangle,
-  Building2,
-  Coins,
-  Share2,
-  MessageCircle,
-  Printer,
-  Loader2,
-} from "lucide-react"
+import { ArrowLeft, CircleCheck as CheckCircle2, Circle, Clock, MapPin, Calendar, User, TriangleAlert as AlertTriangle, Building2, Coins, Share2, MessageCircle, Printer, Loader as Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
+
+export const dynamic = 'force-dynamic'
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

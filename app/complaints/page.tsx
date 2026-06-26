@@ -4,20 +4,13 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  Search,
-  Filter,
-  X,
-  Eye,
-  MapPin,
-  Calendar,
-  ChevronDown,
-  SlidersHorizontal,
-  SortAsc,
-} from "lucide-react"
+import { Search, ListFilter as Filter, X, Eye, MapPin, Calendar, ChevronDown, SlidersHorizontal, Import as SortAsc } from "lucide-react"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
+
+export const dynamic = 'force-dynamic'
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

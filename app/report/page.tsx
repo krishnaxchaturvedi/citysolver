@@ -4,29 +4,14 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  Camera,
-  Upload,
-  MapPin,
-  X,
-  AlertTriangle,
-  CheckCircle2,
-  Loader2,
-  ImageOff,
-  Crosshair,
-  Building2,
-  Trash2,
-  Lightbulb,
-  Droplets,
-  Waves,
-  Truck,
-  ShieldAlert,
-  HelpCircle,
-} from "lucide-react"
+import { Camera, Upload, MapPin, X, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Loader as Loader2, ImageOff, Crosshair, Building2, Trash2, Lightbulb, Droplets, Save as Waves, Truck, ShieldAlert, Circle as HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
+
+export const dynamic = 'force-dynamic'
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -61,9 +46,9 @@ const categoryIcons: Record<CategoryKey, React.ElementType> = {
 function calculatePriority(category: CategoryKey, description: string): Priority {
   const desc = description.toLowerCase()
 
-  const criticalKeywords = ["highway", "main road", "arterial", "live wire", "electrocution", "flood", "burst", "explosion", "collapse", "accident"]
-  const highKeywords = ["dangerous", "risk", "children", "school", "hospital", "night", "dark", "large", "deep", "blocked", "overflow"]
-  const mediumKeywords = ["broken", "damage", "leak", "garbage", "waste", "overflow"]
+  const criticalKeywords = ["highway", "main road", "arterial", "live wire", "electrocution", "flood", "burst", "explosion", "collapse", "accident", "fatal", "death", "injury"]
+  const highKeywords = ["dangerous", "risk", "children", "school", "hospital", "night", "dark", "large", "deep", "blocked", "overflow", "urgent", "emergency"]
+  const mediumKeywords = ["broken", "damage", "leak", "garbage", "waste", "overflow", "missing", "dirty"]
 
   const catPriority: Record<CategoryKey, "Critical" | "High" | "Medium"> = {
     "Public Safety": "Critical",
@@ -79,9 +64,83 @@ function calculatePriority(category: CategoryKey, description: string): Priority
   if (criticalKeywords.some(k => desc.includes(k))) return "Critical"
   if (highKeywords.some(k => desc.includes(k))) return "High"
   if (mediumKeywords.some(k => desc.includes(k))) return "Medium"
-  if (mediumKeywords.some(k => desc.includes(k))) return "Medium"
 
   return catPriority[category] || "Low"
+}
+
+function calculateAIAnalysis(category: CategoryKey, description: string, hasImage: boolean, hasLocation: boolean) {
+  const priority = calculatePriority(category, description)
+
+  const priorityScores: Record<Priority, number> = {
+    "Critical": 95,
+    "High": 75,
+    "Medium": 55,
+    "Low": 35,
+  }
+
+  let riskScore = priorityScores[priority]
+  let confidence = 70
+
+  if (hasImage) confidence += 15
+  if (hasLocation) confidence += 10
+  if (description.length > 100) confidence += 5
+  confidence = Math.min(confidence, 95)
+
+  const severityKeywords = ["urgent", "immediate", "dangerous", "safety", "hazard", "risk"]
+  riskScore += severityKeywords.filter(k => description.toLowerCase().includes(k)).length * 5
+  riskScore = Math.min(Math.max(riskScore, 0), 100)
+
+  const resolutionTimes: Record<Priority, string> = {
+    "Critical": "1-2 days",
+    "High": "3-5 days",
+    "Medium": "5-10 days",
+    "Low": "10-15 days",
+  }
+
+  const reasons: Record<Priority, string[]> = {
+    "Critical": [
+      "Safety-critical issue affecting public well-being",
+      "Immediate action required to prevent harm",
+      "High-visibility location with significant footfall",
+    ],
+    "High": [
+      "Significant impact on daily life quality",
+      "Affects multiple citizens in the area",
+      "Infrastructure damage requiring prompt repair",
+    ],
+    "Medium": [
+      "Moderate inconvenience to residents",
+      "Standard municipal response required",
+      "Non-urgent but visible civic issue",
+    ],
+    "Low": [
+      "Minor impact on public infrastructure",
+      "Cosmetic or maintenance issue",
+      "Can be scheduled in regular maintenance cycle",
+    ],
+  }
+
+  const categoryReasons: Record<CategoryKey, string> = {
+    "Public Safety": "Safety issues require immediate attention",
+    "Pothole": "Road damage can cause accidents",
+    "Broken Streetlight": "Affects nighttime visibility and safety",
+    "Water Leakage": "Water waste and potential road damage",
+    "Garbage": "Hygiene and sanitation concern",
+    "Drainage Issue": "Can cause flooding and waterlogging",
+    "Illegal Dumping": "Environmental and health concern",
+    "Other": "General civic issue requiring review",
+  }
+
+  const applicableReasons = reasons[priority].slice(0, 2)
+  applicableReasons.push(categoryReasons[category])
+
+  return {
+    priority,
+    riskScore,
+    confidence,
+    estimatedResolution: resolutionTimes[priority],
+    reasons: applicableReasons,
+  }
 }
 
 export default function ReportIssuePage() {
@@ -107,11 +166,9 @@ export default function ReportIssuePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isDragging, setIsDragging] = React.useState(false)
 
-  const priority = formData.category && formData.description.length >= 20
-    ? calculatePriority(formData.category, formData.description)
+  const aiAnalysis = formData.category && formData.description.length >= 20
+    ? calculateAIAnalysis(formData.category, formData.description, !!image, !!coordinates)
     : null
-
-  const priorityInfo = priority ? priorityMeta[priority] : null
 
   const selectedCategory = formData.category
     ? categories.find(c => c.key === formData.category)
@@ -584,11 +641,49 @@ export default function ReportIssuePage() {
                   </div>
                 )}
 
-                {priority && (
-                  <div className="flex items-center justify-between rounded-lg border p-3">
-                    <span className="text-sm font-medium">AI Detected Priority</span>
-                    <PriorityBadge priority={priority} />
-                  </div>
+                {aiAnalysis && (
+                  <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <AlertTriangle className="size-4 text-primary" />
+                        AI Priority Analysis
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Detected Priority</span>
+                        <PriorityBadge priority={aiAnalysis.priority} />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="rounded-lg bg-background/50 p-2">
+                          <p className="text-xs text-muted-foreground">Risk Score</p>
+                          <p className="font-bold text-lg">{aiAnalysis.riskScore}/100</p>
+                        </div>
+                        <div className="rounded-lg bg-background/50 p-2">
+                          <p className="text-xs text-muted-foreground">Confidence</p>
+                          <p className="font-bold text-lg">{aiAnalysis.confidence}%</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium">Analysis Reasoning:</p>
+                        <ul className="space-y-1 text-xs text-muted-foreground">
+                          {aiAnalysis.reasons.map((reason: string, i: number) => (
+                            <li key={i} className="flex items-start gap-1.5">
+                              <CheckCircle2 className="size-3 mt-0.5 shrink-0 text-primary" />
+                              {reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="rounded-lg bg-muted/50 p-2 text-xs">
+                        <span className="text-muted-foreground">Est. Resolution:</span>
+                        <span className="ml-1 font-medium">{aiAnalysis.estimatedResolution}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
 
                 <div className="grid gap-3 text-sm">
@@ -620,7 +715,7 @@ export default function ReportIssuePage() {
 
                 <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
                   Estimated reward: <span className="font-semibold text-foreground">
-                    {priority === "Critical" ? "150" : priority === "High" ? "90" : priority === "Medium" ? "60" : "30"} coins
+                    {aiAnalysis?.priority === "Critical" ? "150" : aiAnalysis?.priority === "High" ? "90" : aiAnalysis?.priority === "Medium" ? "60" : "30"} coins
                   </span>
                 </div>
               </CardContent>
