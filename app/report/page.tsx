@@ -533,8 +533,8 @@ export default function ReportIssuePage() {
 
           {/* Submit Button */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" asChild>
-              <Link href="/dashboard">Cancel</Link>
+            <Button type="button" variant="outline" render={<Link href="/dashboard" />}>
+              Cancel
             </Button>
             <Button
               type="submit"

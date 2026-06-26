@@ -293,10 +293,8 @@ export default function MyComplaintsPage() {
                       : "You haven't submitted any complaints yet"}
                   </EmptyDescription>
                   {!hasActiveFilters && (
-                    <Button asChild className="mt-4">
-                      <Link href="/report">
-                        Report Your First Issue
-                      </Link>
+                    <Button className="mt-4" render={<Link href="/report" />}>
+                      Report Your First Issue
                     </Button>
                   )}
                 </EmptyHeader>
@@ -351,11 +349,9 @@ export default function MyComplaintsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/tracking/${complaint.id}`}>
-                              <Eye className="mr-1.5 size-3.5" />
-                              Track
-                            </Link>
+                          <Button size="sm" variant="outline" render={<Link href={`/tracking/${complaint.id}`} />}>
+                            <Eye className="mr-1.5 size-3.5" />
+                            Track
                           </Button>
                         </div>
                       </TableCell>

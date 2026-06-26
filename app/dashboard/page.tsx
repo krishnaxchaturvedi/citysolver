@@ -21,7 +21,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress"
+import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/status-badges"
 import { PriorityBadge } from "@/components/status-badges"
@@ -35,12 +35,10 @@ import {
 } from "@/components/ui/table"
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, ResponsiveContainer, Legend, AreaChart, Area, CartesianGrid, Tooltip } from "recharts"
-import { currentUser, complaints, monthlyReports, categoryBreakdown, priorityDistribution } from "@/lib/data"
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
+import { currentUser, complaints, monthlyReports, priorityDistribution } from "@/lib/data"
 
 const stats = [
   {
@@ -177,12 +175,11 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Progress value={resolutionRate} className="h-4 w-full">
-                <div className="flex items-center justify-between pt-2">
-                  <ProgressLabel>{resolutionRate}% resolved</ProgressLabel>
-                  <ProgressValue>{currentUser.resolved}/{currentUser.totalReports}</ProgressValue>
-                </div>
-              </Progress>
+              <div className="flex items-center justify-between text-sm font-medium">
+                <span>{resolutionRate}% resolved</span>
+                <span className="text-muted-foreground">{currentUser.resolved}/{currentUser.totalReports}</span>
+              </div>
+              <Progress value={resolutionRate} className="mt-2 h-4 w-full" />
               <div className="mt-4 flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">City average: 84%</span>
                 <span className="flex items-center gap-1 font-medium text-success">
@@ -200,29 +197,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Button asChild className="h-auto flex-col gap-2 py-4">
-                <Link href="/report">
-                  <PlusCircle className="size-5" />
-                  Report New Issue
-                </Link>
+              <Button className="h-auto flex-col gap-2 py-4" render={<Link href="/report" />}>
+                <PlusCircle className="size-5" />
+                Report New Issue
               </Button>
-              <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
-                <Link href="/tracking/CTS-2026-0001">
-                  <Search className="size-5" />
-                  Track Complaint
-                </Link>
+              <Button variant="outline" className="h-auto flex-col gap-2 py-4" render={<Link href="/tracking/CTS-2026-0001" />}>
+                <Search className="size-5" />
+                Track Complaint
               </Button>
-              <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
-                <Link href="/map">
-                  <Map className="size-5" />
-                  City Map
-                </Link>
+              <Button variant="outline" className="h-auto flex-col gap-2 py-4" render={<Link href="/map" />}>
+                <Map className="size-5" />
+                City Map
               </Button>
-              <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
-                <Link href="/complaints">
-                  <ClipboardList className="size-5" />
-                  My Complaints
-                </Link>
+              <Button variant="outline" className="h-auto flex-col gap-2 py-4" render={<Link href="/complaints" />}>
+                <ClipboardList className="size-5" />
+                My Complaints
               </Button>
             </div>
           </CardContent>
@@ -292,8 +281,8 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Recent Complaints</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/complaints">View All</Link>
+            <Button variant="outline" size="sm" render={<Link href="/complaints" />}>
+              View All
             </Button>
           </CardHeader>
           <CardContent>

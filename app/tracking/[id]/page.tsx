@@ -134,9 +134,7 @@ export default function TrackComplaintPage() {
                 Ticket ID <span className="font-mono font-medium">{ticketId}</span> does not exist or may have been removed.
               </p>
             </div>
-            <Button asChild>
-              <Link href="/complaints">View All Complaints</Link>
-            </Button>
+            <Button render={<Link href="/complaints" />}>View All Complaints</Button>
           </CardContent>
         </Card>
       </DashboardShell>
@@ -176,11 +174,9 @@ export default function TrackComplaintPage() {
         avatar: currentUser.avatar,
       }}
       actions={
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/complaints">
-            <ArrowLeft className="mr-2 size-4" />
-            Back to Complaints
-          </Link>
+        <Button variant="outline" size="sm" render={<Link href="/complaints" />}>
+          <ArrowLeft className="mr-2 size-4" />
+          Back to Complaints
         </Button>
       }
     >
@@ -362,11 +358,9 @@ export default function TrackComplaintPage() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/map">
-                  <MapPin className="mr-2 size-4" />
-                  View on City Map
-                </Link>
+              <Button variant="outline" className="w-full" render={<Link href="/map" />}>
+                <MapPin className="mr-2 size-4" />
+                View on City Map
               </Button>
             </CardContent>
           </Card>
@@ -385,11 +379,9 @@ export default function TrackComplaintPage() {
                 <Printer className="mr-2 size-4" />
                 Print Details
               </Button>
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <Link href="/report">
-                  <AlertTriangle className="mr-2 size-4" />
-                  Report Similar Issue
-                </Link>
+              <Button variant="outline" className="w-full justify-start" render={<Link href="/report" />}>
+                <AlertTriangle className="mr-2 size-4" />
+                Report Similar Issue
               </Button>
             </CardContent>
           </Card>
