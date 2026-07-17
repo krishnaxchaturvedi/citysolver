@@ -4,7 +4,7 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Camera, Upload, MapPin, X, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Loader as Loader2, ImageOff, Crosshair, Building2, Trash2, Lightbulb, Droplets, Save as Waves, Truck, ShieldAlert, Circle as HelpCircle } from "lucide-react"
+import { Camera, Upload, MapPin, X, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Loader as Loader2, ImageOff, Crosshair, Building2, Trash2, Lightbulb, Droplets, Save as Waves, Truck, ShieldAlert, Circle as HelpCircle, Brain, Copy } from "lucide-react"
 import { toast } from "sonner"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
@@ -16,9 +16,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Badge } from "@/components/ui/badge"
-import { PriorityBadge } from "@/components/status-badges"
 import {
   Select,
   SelectContent,
@@ -31,117 +30,10 @@ import {
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { currentUser, type Priority, type CategoryKey, categories, priorityMeta } from "@/lib/data"
-
-const categoryIcons: Record<CategoryKey, React.ElementType> = {
-  "Pothole": Building2,
-  "Garbage": Trash2,
-  "Broken Streetlight": Lightbulb,
-  "Water Leakage": Droplets,
-  "Drainage Issue": Waves,
-  "Illegal Dumping": Truck,
-  "Public Safety": ShieldAlert,
-  "Other": HelpCircle,
-}
-
-function calculatePriority(category: CategoryKey, description: string): Priority {
-  const desc = description.toLowerCase()
-
-  const criticalKeywords = ["highway", "main road", "arterial", "live wire", "electrocution", "flood", "burst", "explosion", "collapse", "accident", "fatal", "death", "injury"]
-  const highKeywords = ["dangerous", "risk", "children", "school", "hospital", "night", "dark", "large", "deep", "blocked", "overflow", "urgent", "emergency"]
-  const mediumKeywords = ["broken", "damage", "leak", "garbage", "waste", "overflow", "missing", "dirty"]
-
-  const catPriority: Record<CategoryKey, "Critical" | "High" | "Medium"> = {
-    "Public Safety": "Critical",
-    "Pothole": "High",
-    "Broken Streetlight": "High",
-    "Water Leakage": "High",
-    "Garbage": "Medium",
-    "Drainage Issue": "Medium",
-    "Illegal Dumping": "Medium",
-    "Other": "Medium",
-  }
-
-  if (criticalKeywords.some(k => desc.includes(k))) return "Critical"
-  if (highKeywords.some(k => desc.includes(k))) return "High"
-  if (mediumKeywords.some(k => desc.includes(k))) return "Medium"
-
-  return catPriority[category] || "Low"
-}
-
-function calculateAIAnalysis(category: CategoryKey, description: string, hasImage: boolean, hasLocation: boolean) {
-  const priority = calculatePriority(category, description)
-
-  const priorityScores: Record<Priority, number> = {
-    "Critical": 95,
-    "High": 75,
-    "Medium": 55,
-    "Low": 35,
-  }
-
-  let riskScore = priorityScores[priority]
-  let confidence = 70
-
-  if (hasImage) confidence += 15
-  if (hasLocation) confidence += 10
-  if (description.length > 100) confidence += 5
-  confidence = Math.min(confidence, 95)
-
-  const severityKeywords = ["urgent", "immediate", "dangerous", "safety", "hazard", "risk"]
-  riskScore += severityKeywords.filter(k => description.toLowerCase().includes(k)).length * 5
-  riskScore = Math.min(Math.max(riskScore, 0), 100)
-
-  const resolutionTimes: Record<Priority, string> = {
-    "Critical": "1-2 days",
-    "High": "3-5 days",
-    "Medium": "5-10 days",
-    "Low": "10-15 days",
-  }
-
-  const reasons: Record<Priority, string[]> = {
-    "Critical": [
-      "Safety-critical issue affecting public well-being",
-      "Immediate action required to prevent harm",
-      "High-visibility location with significant footfall",
-    ],
-    "High": [
-      "Significant impact on daily life quality",
-      "Affects multiple citizens in the area",
-      "Infrastructure damage requiring prompt repair",
-    ],
-    "Medium": [
-      "Moderate inconvenience to residents",
-      "Standard municipal response required",
-      "Non-urgent but visible civic issue",
-    ],
-    "Low": [
-      "Minor impact on public infrastructure",
-      "Cosmetic or maintenance issue",
-      "Can be scheduled in regular maintenance cycle",
-    ],
-  }
-
-  const categoryReasons: Record<CategoryKey, string> = {
-    "Public Safety": "Safety issues require immediate attention",
-    "Pothole": "Road damage can cause accidents",
-    "Broken Streetlight": "Affects nighttime visibility and safety",
-    "Water Leakage": "Water waste and potential road damage",
-    "Garbage": "Hygiene and sanitation concern",
-    "Drainage Issue": "Can cause flooding and waterlogging",
-    "Illegal Dumping": "Environmental and health concern",
-    "Other": "General civic issue requiring review",
-  }
-
-  const applicableReasons = reasons[priority].slice(0, 2)
-  applicableReasons.push(categoryReasons[category])
-
-  return {
-    priority,
-    riskScore,
-    confidence,
-    estimatedResolution: resolutionTimes[priority],
-    reasons: applicableReasons,
-  }
-}
+import { calculateAIAnalysis, detectDuplicates } from "@/lib/ai-analysis"
+import { AIAnalysisPanel } from "@/components/ai/ai-analysis-panel"
+import { DuplicateDetectionCard } from "@/components/ai/duplicate-detection-card"
+import { AnimatedCard } from "@/components/ai/animated"
 
 export default function ReportIssuePage() {
   const router = useRouter()
@@ -165,9 +57,15 @@ export default function ReportIssuePage() {
   const [locationError, setLocationError] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isDragging, setIsDragging] = React.useState(false)
+  const [reportAnyway, setReportAnyway] = React.useState(false)
 
-  const aiAnalysis = formData.category && formData.description.length >= 20
-    ? calculateAIAnalysis(formData.category, formData.description, !!image, !!coordinates)
+  const showAI = formData.category && formData.description.length >= 20
+  const aiAnalysis = showAI
+    ? calculateAIAnalysis(formData.category as CategoryKey, formData.description, !!image, !!coordinates, formData.location)
+    : null
+
+  const duplicate = showAI && !reportAnyway
+    ? detectDuplicates(formData.category as CategoryKey, formData.description, formData.location, coordinates)
     : null
 
   const selectedCategory = formData.category
@@ -325,7 +223,7 @@ export default function ReportIssuePage() {
       items={citizenNav}
       label="Citizen Portal"
       title="Report an Issue"
-      description="Help improve your city by reporting civic issues"
+      description="AI-powered complaint filing with real-time analysis"
       user={{
         name: currentUser.name,
         detail: currentUser.rank,
@@ -610,9 +508,10 @@ export default function ReportIssuePage() {
           </div>
         </div>
 
-        {/* Live Preview */}
+        {/* AI Analysis Sidebar */}
         <div className="lg:col-span-2">
-          <div className="sticky top-24">
+          <div className="sticky top-24 space-y-4">
+            {/* Live Preview Card */}
             <Card className="overflow-hidden">
               <CardHeader>
                 <Badge variant="outline" className="w-fit text-xs">
@@ -639,51 +538,6 @@ export default function ReportIssuePage() {
                       <span className="text-sm">No photo added</span>
                     </div>
                   </div>
-                )}
-
-                {aiAnalysis && (
-                  <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <AlertTriangle className="size-4 text-primary" />
-                        AI Priority Analysis
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Detected Priority</span>
-                        <PriorityBadge priority={aiAnalysis.priority} />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="rounded-lg bg-background/50 p-2">
-                          <p className="text-xs text-muted-foreground">Risk Score</p>
-                          <p className="font-bold text-lg">{aiAnalysis.riskScore}/100</p>
-                        </div>
-                        <div className="rounded-lg bg-background/50 p-2">
-                          <p className="text-xs text-muted-foreground">Confidence</p>
-                          <p className="font-bold text-lg">{aiAnalysis.confidence}%</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium">Analysis Reasoning:</p>
-                        <ul className="space-y-1 text-xs text-muted-foreground">
-                          {aiAnalysis.reasons.map((reason: string, i: number) => (
-                            <li key={i} className="flex items-start gap-1.5">
-                              <CheckCircle2 className="size-3 mt-0.5 shrink-0 text-primary" />
-                              {reason}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="rounded-lg bg-muted/50 p-2 text-xs">
-                        <span className="text-muted-foreground">Est. Resolution:</span>
-                        <span className="ml-1 font-medium">{aiAnalysis.estimatedResolution}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
                 )}
 
                 <div className="grid gap-3 text-sm">
@@ -720,6 +574,36 @@ export default function ReportIssuePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* AI Analysis Panel */}
+            {aiAnalysis && <AIAnalysisPanel analysis={aiAnalysis} />}
+
+            {/* Duplicate Detection */}
+            {aiAnalysis && duplicate && (
+              <DuplicateDetectionCard
+                duplicate={duplicate}
+                onReportAnyway={() => setReportAnyway(true)}
+              />
+            )}
+
+            {/* Empty state when AI not ready */}
+            {!aiAnalysis && (
+              <AnimatedCard>
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+                    <div className="flex size-14 items-center justify-center rounded-xl bg-muted">
+                      <Brain className="size-7 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">AI Analysis Awaiting Input</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select a category and enter at least 20 characters of description to activate real-time AI analysis
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </AnimatedCard>
+            )}
           </div>
         </div>
       </form>
