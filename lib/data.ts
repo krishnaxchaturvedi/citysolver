@@ -253,14 +253,14 @@ export interface LeaderboardEntry {
 }
 
 export const leaderboard: LeaderboardEntry[] = [
-  { rank: 1, name: "Priya Nair", avatar: "/indian-woman-portrait.png", reports: 148, coins: 12450, successRate: 96, badge: "City Champion" },
-  { rank: 2, name: "Aarav Sharma", avatar: "/indian-man-portrait.png", reports: 132, coins: 10980, successRate: 93, badge: "Community Hero" },
-  { rank: 3, name: "Sneha Iyer", avatar: "/young-indian-woman.png", reports: 119, coins: 9640, successRate: 94, badge: "Community Hero" },
-  { rank: 4, name: "Rohan Verma", avatar: "/indian-young-man.png", reports: 101, coins: 8120, successRate: 89, badge: "Verified Reporter" },
-  { rank: 5, name: "Kabir Khan", avatar: "/bearded-indian-man.png", reports: 94, coins: 7350, successRate: 88, badge: "Verified Reporter" },
-  { rank: 6, name: "Ananya Reddy", avatar: "/smiling-indian-woman.png", reports: 87, coins: 6890, successRate: 91, badge: "Verified Reporter" },
-  { rank: 7, name: "Vikram Patel", avatar: "/indian-man-glasses.png", reports: 76, coins: 5980, successRate: 85, badge: "Active Citizen" },
-  { rank: 8, name: "Meera Joshi", avatar: "/indian-woman-smiling-headshot.png", reports: 68, coins: 5240, successRate: 87, badge: "Active Citizen" },
+  { rank: 1, name: "Priya Nair", avatar: "/placeholder-user.jpg", reports: 148, coins: 12450, successRate: 96, badge: "City Champion" },
+  { rank: 2, name: "Aarav Sharma", avatar: "/placeholder-user.jpg", reports: 132, coins: 10980, successRate: 93, badge: "Community Hero" },
+  { rank: 3, name: "Sneha Iyer", avatar: "/placeholder-user.jpg", reports: 119, coins: 9640, successRate: 94, badge: "Community Hero" },
+  { rank: 4, name: "Rohan Verma", avatar: "/placeholder-user.jpg", reports: 101, coins: 8120, successRate: 89, badge: "Verified Reporter" },
+  { rank: 5, name: "Kabir Khan", avatar: "/placeholder-user.jpg", reports: 94, coins: 7350, successRate: 88, badge: "Verified Reporter" },
+  { rank: 6, name: "Ananya Reddy", avatar: "/placeholder-user.jpg", reports: 87, coins: 6890, successRate: 91, badge: "Verified Reporter" },
+  { rank: 7, name: "Vikram Patel", avatar: "/placeholder-user.jpg", reports: 76, coins: 5980, successRate: 85, badge: "Active Citizen" },
+  { rank: 8, name: "Meera Joshi", avatar: "/placeholder-user.jpg", reports: 68, coins: 5240, successRate: 87, badge: "Active Citizen" },
 ]
 
 export interface NotificationItem {
@@ -367,7 +367,7 @@ export const currentUser = {
   phone: "+91 98765 43210",
   city: "New Delhi",
   state: "Delhi",
-  avatar: "/indian-man-portrait.png",
+  avatar: "/placeholder-user.jpg",
   rank: "Community Hero",
   coinBalance: 4280,
   coinsEarned: 10980,

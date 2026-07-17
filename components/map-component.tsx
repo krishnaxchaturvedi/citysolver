@@ -87,9 +87,9 @@ export function MapComponent({
                   </span>
                 </div>
                 <p className="font-medium text-sm">{complaint.category}</p>
-                <p className="text-xs text-gray-600">{complaint.title}</p>
-                <p className="text-xs text-gray-500">{complaint.citizen}</p>
-                <p className="text-xs text-gray-500">{complaint.date}</p>
+                <p className="text-xs text-muted-foreground">{complaint.title}</p>
+                <p className="text-xs text-muted-foreground">{complaint.citizen}</p>
+                <p className="text-xs text-muted-foreground">{complaint.date}</p>
                 <div className="flex gap-2 pt-2">
                   <a
                     href={`/tracking/${complaint.id}`}

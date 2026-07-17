@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { TrendingUp, TrendingDown, Calendar, Download, ChartBar as BarChart3, ChartPie as PieChartIcon, Activity, Users, Clock } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { adminNav } from "@/components/dashboard/nav-config"
@@ -187,9 +188,16 @@ export default function AdminAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <ChartContainer config={chartConfig} className="h-64 w-full">
-                    <div className="flex h-64 items-center justify-center text-muted-foreground">
-                      Chart loading...
-                    </div>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dailyComplaints} barGap={4}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                        <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
+                        <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
+                        <Tooltip cursor={{ fill: "var(--muted)" }} contentStyle={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                        <Bar dataKey="complaints" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="resolved" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </ChartContainer>
                   <div className="mt-4 flex items-center gap-6 text-sm">
                     <div className="flex items-center gap-2">
@@ -214,14 +222,24 @@ export default function AdminAnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex h-64 items-center justify-center">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {priorityDistribution.map((item) => (
-                        <div key={item.name} className="flex items-center gap-2">
-                          <span className="size-3 rounded-full" style={{ backgroundColor: item.fill.includes('var') ? 'currentColor' : item.fill }} />
-                          <span>{item.name}: {item.value}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={priorityDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
+                          {priorityDistribution.map((entry) => (
+                            <Cell key={entry.name} fill={entry.fill.includes('var') ? 'var(--chart-1)' : entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-2 flex flex-wrap justify-center gap-4 text-sm">
+                    {priorityDistribution.map((item) => (
+                      <div key={item.name} className="flex items-center gap-2">
+                        <span className="size-3 rounded-full" style={{ backgroundColor: item.fill.includes('var') ? 'var(--chart-1)' : item.fill }} />
+                        <span className="text-muted-foreground">{item.name}: {item.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

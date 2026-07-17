@@ -3,7 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { MapPin, Search, ListFilter as Filter, X, TriangleAlert as AlertTriangle, Eye, Layers } from "lucide-react"
+import { MapPin, Search, ListFilter, X, TriangleAlert as AlertTriangle, Eye, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { currentUser, complaints, type Status, type Priority, type CategoryKey, categories, priorityMeta, type Complaint } from "@/lib/data"
 
@@ -49,6 +49,7 @@ export default function MapPage() {
   const [categoryFilter, setCategoryFilter] = React.useState<CategoryKey[]>([])
   const [showHeatmap, setShowHeatmap] = React.useState(false)
   const [selectedComplaint, setSelectedComplaint] = React.useState<Complaint | null>(null)
+  const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [MapComponents, setMapComponents] = React.useState<React.ComponentType<{
     complaints: Complaint[]
     selectedComplaint: Complaint | null
@@ -103,8 +104,20 @@ export default function MapPage() {
   const hasActiveFilters = search || statusFilter.length > 0 || priorityFilter.length > 0 || categoryFilter.length > 0
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
-      <div className="w-80 shrink-0 overflow-y-auto border-r border-border bg-background p-4">
+    <div className="flex h-[calc(100vh-64px)] relative">
+      <Button
+        variant="outline"
+        size="sm"
+        className="absolute left-4 top-4 z-[1000] md:hidden"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        <ListFilter className="mr-1.5 size-4" />
+        {sidebarOpen ? <X className="size-4" /> : "Filters"}
+      </Button>
+      <div className={cn(
+        "w-80 shrink-0 overflow-y-auto border-r border-border bg-background p-4 absolute inset-y-0 left-0 z-[999] transition-transform duration-300 md:relative md:translate-x-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">City Map</h2>
@@ -125,7 +138,7 @@ export default function MapPage() {
             <DropdownMenu>
               <DropdownMenuTrigger render={
                 <Button variant="outline" size="sm" className="gap-1">
-                  <Filter className="size-3.5" />
+                  <ListFilter className="size-3.5" />
                   Status
                   {statusFilter.length > 0 && <span className="text-xs">({statusFilter.length})</span>}
                 </Button>
@@ -148,7 +161,7 @@ export default function MapPage() {
             <DropdownMenu>
               <DropdownMenuTrigger render={
                 <Button variant="outline" size="sm" className="gap-1">
-                  <Filter className="size-3.5" />
+                  <ListFilter className="size-3.5" />
                   Priority
                   {priorityFilter.length > 0 && <span className="text-xs">({priorityFilter.length})</span>}
                 </Button>
@@ -172,7 +185,7 @@ export default function MapPage() {
             <DropdownMenu>
               <DropdownMenuTrigger render={
                 <Button variant="outline" size="sm" className="gap-1">
-                  <Filter className="size-3.5" />
+                  <ListFilter className="size-3.5" />
                   Category
                   {categoryFilter.length > 0 && <span className="text-xs">({categoryFilter.length})</span>}
                 </Button>
@@ -272,6 +285,8 @@ export default function MapPage() {
       </div>
 
       <div className="relative flex-1">
+      <div className={cn("absolute inset-0 z-[998] bg-black/30 md:hidden", sidebarOpen ? "block" : "hidden")} onClick={() => setSidebarOpen(false)} />
+      <div className="relative h-full w-full">
         {MapComponents ? (
           <MapComponents
             complaints={filteredComplaints}
@@ -349,6 +364,7 @@ export default function MapPage() {
             </CardContent>
           </Card>
         )}
+      </div>
       </div>
     </div>
   )
