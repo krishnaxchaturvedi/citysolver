@@ -1,405 +1,267 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { User, Mail, Phone, MapPin, Camera, Save, CreditCard as Edit, Trophy, Coins, FileText, CircleCheck as CheckCircle2, Clock, Shield, Award } from "lucide-react"
-import { toast } from "sonner"
-
+import { Shield, Star, Award, Trophy, Crown, Medal, Target, TrendingUp, CircleCheck as CheckCircle2, Zap, Mail, Phone, MapPin, Sparkles, Activity } from "lucide-react"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
-
-export const dynamic = 'force-dynamic'
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { Avatar } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Field, FieldGroup, FieldLabel, FieldDescription } from "@/components/ui/field"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AnimatedCard, AnimatedCounter, AnimatedProgress } from "@/components/ai/animated"
+import { ProfileSkeleton } from "@/components/loading-skeletons"
+import { currentUser } from "@/lib/data"
+import { currentCitizen, reputationBadges, citizenAchievements } from "@/lib/citizen-data"
+import { scoreBgColor } from "@/lib/score-utils"
 import { cn } from "@/lib/utils"
-import { currentUser, complaints, rewardBadges, achievements } from "@/lib/data"
 
-const tierColors = {
-  bronze: "bg-amber-700/10 text-amber-700 border-amber-700/30",
-  silver: "bg-gray-400/10 text-gray-600 border-gray-400/30",
-  gold: "bg-yellow-500/10 text-yellow-700 border-yellow-500/30",
-  platinum: "bg-purple-500/10 text-purple-700 border-purple-500/30",
+const tierIcons: Record<string, React.ElementType> = {
+  bronze: Medal, silver: Award, gold: Trophy, platinum: Crown,
 }
 
+const ReputationStatCard = React.memo(function ReputationStatCard({ label, value, suffix, icon: Icon, color, delay }: {
+  label: string
+  value: number
+  suffix?: string
+  icon: React.ElementType
+  color: string
+  delay: number
+}) {
+  return (
+    <AnimatedCard key={label} delay={delay}>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className={cn("flex size-10 items-center justify-center rounded-lg bg-muted/50", color)}>
+              <Icon className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="text-xl font-bold"><AnimatedCounter value={value} suffix={suffix || ""} /></p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </AnimatedCard>
+  )
+})
+
+const ContributionBar = React.memo(function ContributionBar({ label, value, total, danger, delay }: {
+  label: string
+  value: number
+  total: number
+  danger?: boolean
+  delay: number
+}) {
+  const pct = (value / total) * 100
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className={cn("font-semibold", danger && value > 0 && "text-destructive")}>{value}</span>
+      </div>
+      <AnimatedProgress value={pct} barClassName={danger ? "bg-destructive" : scoreBgColor(pct)} delay={delay} />
+    </div>
+  )
+})
+
+const AchievementItem = React.memo(function AchievementItem({ ach, delay }: {
+  ach: typeof citizenAchievements[number]
+  delay: number
+}) {
+  const pct = Math.round((ach.progress / ach.total) * 100)
+  return (
+    <div key={ach.name}>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5">
+          {ach.completed ? <CheckCircle2 className="size-3 text-success" aria-hidden="true" /> : <Target className="size-3 text-muted-foreground" aria-hidden="true" />}
+          {ach.name}
+        </span>
+        <span className={cn("font-semibold", ach.completed && "text-success")}>{ach.progress}/{ach.total}</span>
+      </div>
+      <AnimatedProgress value={pct} barClassName={ach.completed ? "bg-success" : "bg-primary"} delay={delay} />
+    </div>
+  )
+})
+
 export default function ProfilePage() {
-  const [isEditing, setIsEditing] = React.useState(false)
-  const [formData, setFormData] = React.useState({
-    name: currentUser.name,
-    email: currentUser.email,
-    phone: currentUser.phone,
-    city: currentUser.city,
-    state: currentUser.state,
-  })
-  const [isSaving, setIsSaving] = React.useState(false)
+  const citizen = currentCitizen
+  const [loading, setLoading] = React.useState(true)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSaving(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    setIsEditing(false)
-    toast.success("Profile updated successfully")
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 400)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const reputationStats = React.useMemo(() => [
+    { label: "Trust Score", value: citizen.trustScore, icon: Shield, color: "text-success" },
+    { label: "Contribution Score", value: citizen.contributionScore, icon: TrendingUp, color: "text-primary" },
+    { label: "Response Rate", value: citizen.responseRate, suffix: "%", icon: Zap, color: "text-warning-foreground" },
+    { label: "Coins", value: citizen.coins, icon: Star, color: "text-warning-foreground" },
+  ], [citizen])
+
+  const contributionStats = React.useMemo(() => [
+    { label: "Monthly Contribution", value: citizen.monthlyContribution, total: 30 },
+    { label: "Lifetime Contribution", value: citizen.lifetimeContribution, total: 150 },
+    { label: "Verified Complaints", value: citizen.verifiedComplaints, total: citizen.lifetimeContribution },
+    { label: "False Reports", value: citizen.falseReports, total: 10, danger: true },
+  ], [citizen])
+
+  const verifiedRate = React.useMemo(
+    () => Math.round((citizen.verifiedComplaints / citizen.lifetimeContribution) * 100),
+    [citizen]
+  )
+
+  if (loading) {
+    return (
+      <DashboardShell items={citizenNav} label="Citizen Portal" title="Profile" description="Your reputation and contribution overview" user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}>
+        <ProfileSkeleton />
+      </DashboardShell>
+    )
   }
-
-  const resolvedCount = complaints.filter(c => c.citizen === currentUser.name && c.status === "Resolved").length
-  const pendingCount = complaints.filter(c => c.citizen === currentUser.name && c.status !== "Resolved" && c.status !== "Rejected").length
-  const totalComplaints = complaints.filter(c => c.citizen === currentUser.name).length
-  const resolutionRate = Math.round((resolvedCount / totalComplaints) * 100) || 0
 
   return (
     <DashboardShell
       items={citizenNav}
       label="Citizen Portal"
       title="Profile"
-      description="Manage your account and view your impact"
-      user={{
-        name: currentUser.name,
-        detail: currentUser.rank,
-        avatar: currentUser.avatar,
-      }}
+      description="Your reputation and contribution overview"
+      user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}
     >
-      <div className="grid gap-6">
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex flex-col items-center gap-6 sm:flex-row">
-              <div className="relative">
-                <div className="relative size-28 overflow-hidden rounded-full border-4 border-background shadow-lg">
-                  <Image
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    fill
-                    className="object-cover"
-                    sizes="112px"
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute bottom-0 right-0 rounded-full"
-                >
-                  <Camera className="size-4" />
-                </Button>
-              </div>
-
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start">
-                  <h2 className="text-2xl font-bold">{currentUser.name}</h2>
-                  <Badge variant="secondary">{currentUser.rank}</Badge>
-                </div>
-                <p className="text-muted-foreground">{currentUser.email}</p>
-                <div className="mt-2 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="size-4" />
-                    {currentUser.city}, {currentUser.state}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="size-4" />
-                    {currentUser.phone}
-                  </span>
+      <AnimatedCard>
+        <Card className="overflow-hidden">
+          <div className="h-24 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" aria-hidden="true" />
+          <CardContent className="-mt-12 p-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <Avatar src={citizen.avatar} alt={`${citizen.name} profile photo`} className="size-24 ring-4 ring-background" />
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold">{citizen.name}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className="gap-1"><Crown className="size-3 text-warning-foreground" aria-hidden="true" /> {citizen.communityRank}</Badge>
+                  <Badge variant="outline" className="gap-1"><Sparkles className="size-3 text-primary" aria-hidden="true" /> {citizen.volunteerRank}</Badge>
+                  <Badge variant="outline" className="font-mono text-xs">{citizen.id}</Badge>
                 </div>
               </div>
-
-              <Button
-                variant={isEditing ? "default" : "outline"}
-                onClick={() => setIsEditing(!isEditing)}
-              >
-                {isEditing ? (
-                  <>
-                    <Save className="mr-2 size-4" />
-                    Save Changes
-                  </>
-                ) : (
-                  <>
-                    <Edit className="mr-2 size-4" />
-                    Edit Profile
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-1.5 text-right">
+                <Star className="size-5 fill-warning text-warning-foreground" aria-hidden="true" />
+                <span className="text-2xl font-bold">{citizen.trustScore}</span>
+                <span className="text-sm text-muted-foreground">/100 Trust</span>
+              </div>
+            </div>
+            <Separator className="my-4" />
+            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div className="flex items-center gap-2 text-muted-foreground"><Mail className="size-4" aria-hidden="true" /> {currentUser.email}</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Phone className="size-4" aria-hidden="true" /> {currentUser.phone}</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="size-4" aria-hidden="true" /> {currentUser.city}, {currentUser.state}</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Trophy className="size-4" aria-hidden="true" /> {citizen.achievements} achievements</div>
             </div>
           </CardContent>
         </Card>
+      </AnimatedCard>
 
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
-          </TabsList>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {reputationStats.map((s, i) => (
+          <ReputationStatCard key={s.label} label={s.label} value={s.value} suffix={s.suffix} icon={s.icon} color={s.color} delay={i * 80} />
+        ))}
+      </div>
 
-          <TabsContent value="overview" className="mt-4 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardContent className="flex items-center gap-4 py-6">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
-                    <FileText className="size-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{currentUser.totalReports}</p>
-                    <p className="text-sm text-muted-foreground">Total Reports</p>
-                  </div>
-                </CardContent>
-              </Card>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <AnimatedCard delay={200}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm"><Activity className="size-4 text-primary" aria-hidden="true" /> Contribution Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {contributionStats.map((stat, i) => (
+                <ContributionBar key={stat.label} label={stat.label} value={stat.value} total={stat.total} danger={stat.danger} delay={i * 100} />
+              ))}
+            </CardContent>
+          </Card>
+        </AnimatedCard>
 
-              <Card>
-                <CardContent className="flex items-center gap-4 py-6">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-success/10">
-                    <CheckCircle2 className="size-6 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{currentUser.resolved}</p>
-                    <p className="text-sm text-muted-foreground">Resolved</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="flex items-center gap-4 py-6">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-warning/10">
-                    <Clock className="size-6 text-warning" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{currentUser.pending}</p>
-                    <p className="text-sm text-muted-foreground">Pending</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="flex items-center gap-4 py-6">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-warning/10">
-                    <Coins className="size-6 text-warning" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{currentUser.coinBalance.toLocaleString("en-IN")}</p>
-                    <p className="text-sm text-muted-foreground">Coins</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="size-5" />
-                    Community Impact
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span>Resolution Rate</span>
-                      <span className="font-medium">{resolutionRate}%</span>
-                    </div>
-                    <Progress value={resolutionRate} className="h-2" />
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <p className="text-xl font-bold">{currentUser.coinsEarned.toLocaleString("en-IN")}</p>
-                      <p className="text-xs text-muted-foreground">Coins Earned</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{currentUser.coinsRedeemed.toLocaleString("en-IN")}</p>
-                      <p className="text-xs text-muted-foreground">Coins Redeemed</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="size-5" />
-                    Badges Unlocked
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    {rewardBadges.filter(b => b.unlocked).map(badge => (
-                      <div key={badge.name} className="flex items-center gap-3">
-                        <div className={cn(
-                          "flex size-10 items-center justify-center rounded-full border-2",
-                          tierColors[badge.tier]
-                        )}>
-                          <Shield className="size-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{badge.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{badge.tier} Tier</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {complaints
-                    .filter(c => c.citizen === currentUser.name)
-                    .slice(0, 5)
-                    .map(complaint => (
-                      <div key={complaint.id} className="flex items-center gap-4">
-                        <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          <Image
-                            src={complaint.image}
-                            alt={complaint.category}
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium">{complaint.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {complaint.date} · {complaint.category}
-                          </p>
-                        </div>
-                        <Badge variant={complaint.status === "Resolved" ? "default" : "secondary"}>
-                          {complaint.status}
-                        </Badge>
-                        <Button variant="outline" size="sm" render={<Link href={`/tracking/${complaint.id}`} />}>
-                          View
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="details" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="name">Full Name</FieldLabel>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        disabled={!isEditing}
-                      />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel htmlFor="email">Email Address</FieldLabel>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        disabled={!isEditing}
-                      />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        disabled={!isEditing}
-                      />
-                    </Field>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field>
-                        <FieldLabel htmlFor="city">City</FieldLabel>
-                        <Input
-                          id="city"
-                          value={formData.city}
-                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          disabled={!isEditing}
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldLabel htmlFor="state">State</FieldLabel>
-                        <Input
-                          id="state"
-                          value={formData.state}
-                          onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                          disabled={!isEditing}
-                        />
-                      </Field>
-                    </div>
-                  </FieldGroup>
-
-                  {isEditing && (
-                    <div className="flex justify-end gap-3">
-                      <Button variant="outline" type="button" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={isSaving}>
-                        {isSaving ? "Saving..." : "Save Changes"}
-                      </Button>
-                    </div>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="achievements" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Achievement Progress</CardTitle>
-                <CardDescription>Track your journey as a civic contributor</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {achievements.map((achievement) => {
-                  const isComplete = achievement.progress >= achievement.total
-                  const percentage = Math.min((achievement.progress / achievement.total) * 100, 100)
-
+        <AnimatedCard delay={300}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm"><Award className="size-4 text-primary" aria-hidden="true" /> Earned Badges</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {citizen.badges.map(badge => (
+                  <Badge key={badge} variant="secondary" className="gap-1"><Trophy className="size-3 text-warning-foreground" aria-hidden="true" />{badge}</Badge>
+                ))}
+              </div>
+              <Separator className="my-3" />
+              <p className="mb-2 text-xs text-muted-foreground">All available badges</p>
+              <div className="grid grid-cols-2 gap-2">
+                {reputationBadges.map(badge => {
+                  const TierIcon = tierIcons[badge.tier] || Award
+                  const unlocked = citizen.badges.includes(badge.name)
                   return (
-                    <div key={achievement.name} className="flex gap-4">
-                      <div className={cn(
-                        "flex size-12 shrink-0 items-center justify-center rounded-xl",
-                        isComplete ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                      )}>
-                        {isComplete ? <CheckCircle2 className="size-6" /> : <Award className="size-6" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">{achievement.name}</h4>
-                          <Badge variant={isComplete ? "default" : "secondary"}>
-                            {achievement.progress}/{achievement.total}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                        <Progress value={percentage} className="mt-2 h-2" />
-                      </div>
+                    <div
+                      key={badge.name}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border p-2 transition-colors",
+                        unlocked ? (badge.tier === "bronze" ? "bg-orange-500/10 border-orange-500/20" : badge.tier === "silver" ? "bg-muted/20 border-muted-foreground/20" : badge.tier === "gold" ? "bg-warning/10 border-warning/30" : "bg-primary/10 border-primary/20") : "border-border opacity-50"
+                      )}
+                    >
+                      <TierIcon className={cn("size-4", unlocked ? (badge.tier === "bronze" ? "text-orange-600" : badge.tier === "silver" ? "text-muted-foreground" : badge.tier === "gold" ? "text-warning-foreground" : "text-primary") : "text-muted-foreground")} aria-hidden="true" />
+                      <span className="text-xs font-medium">{badge.name}</span>
                     </div>
                   )
                 })}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+        </AnimatedCard>
+
+        <AnimatedCard delay={400}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm"><Target className="size-4 text-primary" aria-hidden="true" /> Achievements Progress</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {citizenAchievements.slice(0, 5).map((ach, i) => <AchievementItem key={ach.name} ach={ach} delay={i * 80} />)}
+            </CardContent>
+          </Card>
+        </AnimatedCard>
       </div>
+
+      <AnimatedCard delay={500}>
+        <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Shield className="size-4 text-primary" aria-hidden="true" />Trust & Reputation Analysis</CardTitle>
+            <CardDescription>AI-powered assessment of your civic contribution quality</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-success"><AnimatedCounter value={citizen.trustScore} suffix="/100" /></p>
+                <p className="text-sm text-muted-foreground">Trust Score</p>
+                <AnimatedProgress value={citizen.trustScore} barClassName="bg-success" delay={550} className="mt-2" />
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-primary"><AnimatedCounter value={citizen.contributionScore} suffix="/100" /></p>
+                <p className="text-sm text-muted-foreground">Contribution Score</p>
+                <AnimatedProgress value={citizen.contributionScore} barClassName="bg-primary" delay={600} className="mt-2" />
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-warning-foreground"><AnimatedCounter value={citizen.responseRate} suffix="%" /></p>
+                <p className="text-sm text-muted-foreground">Response Rate</p>
+                <AnimatedProgress value={citizen.responseRate} barClassName="bg-warning" delay={650} className="mt-2" />
+              </div>
+            </div>
+            <Separator className="my-4" />
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Sparkles className="size-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+              <p>
+                Your trust score is <span className="font-semibold text-success">Excellent</span> — you are in the top 5% of citizens.
+                Your verified complaint rate is {verifiedRate}% with only {citizen.falseReports} false report{citizen.falseReports === 1 ? "" : "s"}.
+                Keep contributing to maintain your {citizen.communityRank} status!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </AnimatedCard>
     </DashboardShell>
   )
 }

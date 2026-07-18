@@ -1,79 +1,133 @@
+"use client"
+
 import * as React from "react"
 import Link from "next/link"
-import { Bell, Search } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
+import { Avatar } from "@/components/ui/avatar"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ModeToggle } from "@/components/mode-toggle"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import type { NavItem } from "@/components/dashboard/nav-config"
+export interface NavItem {
+  title: string
+  href: string
+  icon: React.ElementType
+}
 
 export function DashboardShell({
   items,
   label,
   title,
   description,
-  actions,
-  children,
   user,
+  children,
 }: {
   items: NavItem[]
   label: string
-  title: string
+  user: { name: string; detail: string; avatar: string }
+  title?: string
   description?: string
-  actions?: React.ReactNode
   children: React.ReactNode
-  user?: { name: string; detail: string; avatar: string }
 }) {
+  const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = React.useState(false)
+  const sidebarRef = React.useRef<HTMLElement>(null)
+
+  React.useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && sidebarOpen) setSidebarOpen(false)
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [sidebarOpen])
+
+  const navItems = React.useMemo(() => items, [items])
+
   return (
-    <SidebarProvider>
-      <DashboardSidebar items={items} label={label} user={user} />
-      <SidebarInset>
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
-          <SidebarTrigger />
-          <div className="relative hidden flex-1 max-w-md md:block">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search complaints, tickets, zones..."
-              className="pl-9"
-            />
+    <div className="flex min-h-screen bg-muted/30">
+      {/* Sidebar */}
+      <aside
+        ref={sidebarRef}
+        aria-label={`${label} navigation`}
+        role="navigation"
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 transform border-r border-border bg-background transition-transform duration-300 md:relative md:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex h-16 items-center gap-2 border-b border-border px-6">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold" aria-hidden="true">
+            C
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <ModeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              aria-label="Notifications"
-              render={<Link href="/notifications" />}
+          <span className="font-semibold">CitySolver</span>
+        </div>
+        <div className="px-3 py-2">
+          <p className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">{label}</p>
+          <nav className="space-y-1" aria-label={label}>
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const active = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <Icon className="size-4" aria-hidden="true" />
+                  {item.title}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4">
+          <div className="flex items-center gap-3">
+            <Avatar src={user.avatar} alt={user.name} className="size-9" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{user.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{user.detail}</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Main */}
+      <div className="flex flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:px-6">
+          <div className="flex items-center gap-3">
+            <button
+              className="rounded-md p-2 hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 md:hidden"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={sidebarOpen}
+              aria-controls="mobile-sidebar"
             >
-              <Bell className="size-5" />
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-destructive" />
-            </Button>
+              <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            {title && (
+              <div>
+                <h1 className="text-lg font-semibold">{title}</h1>
+                {description && <p className="text-sm text-muted-foreground">{description}</p>}
+              </div>
+            )}
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-semibold tracking-tight text-balance">
-                {title}
-              </h1>
-              {description ? (
-                <p className="text-sm text-muted-foreground text-pretty">
-                  {description}
-                </p>
-              ) : null}
-            </div>
-            {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-          </div>
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        <main className="flex-1 p-4 md:p-6" id="main-content">{children}</main>
+      </div>
+    </div>
   )
 }

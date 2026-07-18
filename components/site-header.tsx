@@ -6,7 +6,6 @@ import { Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { ModeToggle } from "@/components/mode-toggle"
 import {
   Sheet,
   SheetContent,
@@ -39,7 +38,6 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <ModeToggle />
           <Button variant="ghost" className="hidden sm:inline-flex" render={<Link href="/login" />}>
             Sign in
           </Button>

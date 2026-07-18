@@ -4,7 +4,7 @@ import * as React from "react"
 import { MapContainer, TileLayer, Marker, Popup, Circle, Rectangle, useMap, ZoomControl } from "react-leaflet"
 import L from "leaflet"
 import type { Complaint, Priority, CategoryKey } from "@/lib/data"
-import { priorityMeta, categories } from "@/lib/data"
+import { priorityMeta, categories, complaints as allComplaints } from "@/lib/data"
 import {
   facilities,
   wards,
@@ -167,7 +167,7 @@ function WardHeatmapLayer() {
   return (
     <>
       {wards.map(w => {
-        const count = complaints.filter(c => {
+        const count = allComplaints.filter(c => {
           const dLat = (c.lat - w.center[0]) * 111
           const dLng = (c.lng - w.center[1]) * 111 * Math.cos(w.center[0] * Math.PI / 180)
           return Math.sqrt(dLat * dLat + dLng * dLng) * 1000 <= 800

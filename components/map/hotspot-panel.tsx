@@ -5,7 +5,7 @@ import {
   TriangleAlert as AlertTriangle,
   TrendingUp,
   Droplets,
-  Road,
+  Route,
   ShieldAlert,
   Gauge,
   Flame,
@@ -109,7 +109,7 @@ export function HotspotPanel({ analysis }: { analysis: HotspotAnalysis }) {
           <CardContent className="p-3.5">
             <div className="flex items-start gap-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10">
-                <Road className="size-4.5 text-warning-foreground" />
+                <Route className="size-4.5 text-warning-foreground" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-muted-foreground">Most Reported Road</p>

@@ -48,10 +48,7 @@ export const categories: IssueCategory[] = [
   { key: "Other", label: "Other", icon: AlertTriangle, description: "Any other civic concern" },
 ]
 
-export const priorityMeta: Record<
-  Priority,
-  { label: string; color: string; mapColor: string; badge: string }
-> = {
+export const priorityMeta: Record<Priority, { label: string; color: string; mapColor: string; badge: string }> = {
   Critical: { label: "Critical", color: "var(--chart-5)", mapColor: "#ef4444", badge: "bg-destructive/10 text-destructive border-destructive/20" },
   High: { label: "High", color: "var(--chart-4)", mapColor: "#f59e0b", badge: "bg-warning/15 text-warning-foreground border-warning/30" },
   Medium: { label: "Medium", color: "var(--chart-1)", mapColor: "#3b82f6", badge: "bg-primary/10 text-primary border-primary/20" },
@@ -67,15 +64,6 @@ export const statusMeta: Record<Status, { label: string; tone: string }> = {
   Resolved: { label: "Resolved", tone: "bg-success/10 text-success border-success/20" },
   Rejected: { label: "Rejected", tone: "bg-destructive/10 text-destructive border-destructive/20" },
 }
-
-export const timelineSteps: Status[] = [
-  "Submitted",
-  "Under Review",
-  "Approved",
-  "Assigned",
-  "In Progress",
-  "Resolved",
-]
 
 export interface Complaint {
   id: string
@@ -100,8 +88,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0001",
     category: "Pothole",
     title: "Large pothole near MG Road junction",
-    description:
-      "A deep pothole has formed at the MG Road junction causing two-wheelers to swerve dangerously into oncoming traffic. Multiple near-misses reported during peak hours.",
+    description: "A deep pothole has formed at the MG Road junction causing two-wheelers to swerve dangerously into oncoming traffic.",
     priority: "Critical",
     status: "In Progress",
     location: "MG Road Junction, Sector 14",
@@ -110,7 +97,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-21",
     citizen: "Aarav Sharma",
     officer: "Eng. R. Mehta",
-    image: "/pothole-on-a-city-road.png",
+    image: "https://images.pexels.com/photos/259887/pexels-photo-259887.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 92,
     coins: 150,
   },
@@ -118,8 +105,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0002",
     category: "Garbage",
     title: "Overflowing garbage bins at market",
-    description:
-      "Garbage bins outside the central market have not been cleared for four days. Stray animals are scattering waste across the footpath.",
+    description: "Garbage bins outside the central market have not been cleared for four days. Stray animals are scattering waste.",
     priority: "High",
     status: "Assigned",
     location: "Central Market, Sector 9",
@@ -128,7 +114,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-20",
     citizen: "Priya Nair",
     officer: "San. T. Rao",
-    image: "/overflowing-garbage-bins-on-a-street.png",
+    image: "https://images.pexels.com/photos/2689327/pexels-photo-2689327.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 74,
     coins: 90,
   },
@@ -136,8 +122,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0003",
     category: "Broken Streetlight",
     title: "Streetlights out on Park Avenue",
-    description:
-      "An entire stretch of streetlights on Park Avenue has been dark for over a week, making the area unsafe for pedestrians at night.",
+    description: "An entire stretch of streetlights on Park Avenue has been dark for over a week, making the area unsafe at night.",
     priority: "Medium",
     status: "Under Review",
     location: "Park Avenue, Sector 22",
@@ -146,7 +131,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-22",
     citizen: "Rohan Verma",
     officer: null,
-    image: "/dark-broken-streetlight-at-night.png",
+    image: "https://images.pexels.com/photos/244860/pexels-photo-244860.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 58,
     coins: 60,
   },
@@ -154,8 +139,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0004",
     category: "Water Leakage",
     title: "Major water pipe burst flooding lane",
-    description:
-      "A water main has burst and is flooding the residential lane, wasting thousands of litres and eroding the road base.",
+    description: "A water main has burst and is flooding the residential lane, wasting thousands of litres and eroding the road base.",
     priority: "Critical",
     status: "Approved",
     location: "Green Park Lane, Sector 18",
@@ -164,7 +148,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-19",
     citizen: "Sneha Iyer",
     officer: "Eng. K. Singh",
-    image: "/burst-water-pipe-flooding-a-street.png",
+    image: "https://images.pexels.com/photos/2915868/pexels-photo-2915868.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 88,
     coins: 150,
   },
@@ -172,8 +156,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0005",
     category: "Drainage Issue",
     title: "Blocked drain causing waterlogging",
-    description:
-      "The storm drain is completely blocked, leading to ankle-deep waterlogging after every rain near the school gate.",
+    description: "The storm drain is completely blocked, leading to ankle-deep waterlogging after every rain near the school gate.",
     priority: "High",
     status: "Resolved",
     location: "School Road, Sector 7",
@@ -182,7 +165,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-12",
     citizen: "Aarav Sharma",
     officer: "San. T. Rao",
-    image: "/blocked-drain-with-stagnant-water.png",
+    image: "https://images.pexels.com/photos/1302306/pexels-photo-1302306.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 70,
     coins: 90,
   },
@@ -190,8 +173,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0006",
     category: "Illegal Dumping",
     title: "Construction debris dumped on empty plot",
-    description:
-      "A contractor has illegally dumped construction debris on the vacant public plot, blocking the walkway and attracting pests.",
+    description: "A contractor has illegally dumped construction debris on the vacant public plot, blocking the walkway.",
     priority: "Medium",
     status: "Submitted",
     location: "Plot 44, Sector 31",
@@ -200,7 +182,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-23",
     citizen: "Kabir Khan",
     officer: null,
-    image: "/construction-debris-dumped-on-empty-lot.png",
+    image: "https://images.pexels.com/photos/2768961/pexels-photo-2768961.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 52,
     coins: 60,
   },
@@ -208,8 +190,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0007",
     category: "Public Safety",
     title: "Exposed electrical wires on footpath",
-    description:
-      "Live electrical wires are hanging dangerously low over the footpath near the bus stop, posing a serious electrocution risk.",
+    description: "Live electrical wires are hanging dangerously low over the footpath near the bus stop, posing electrocution risk.",
     priority: "Critical",
     status: "Resolved",
     location: "Bus Depot Road, Sector 5",
@@ -218,7 +199,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-10",
     citizen: "Priya Nair",
     officer: "Eng. R. Mehta",
-    image: "/exposed-electrical-wires-hazard.png",
+    image: "https://images.pexels.com/photos/258875/pexels-photo-258875.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 95,
     coins: 150,
   },
@@ -226,8 +207,7 @@ export const complaints: Complaint[] = [
     id: "CTS-2026-0008",
     category: "Pothole",
     title: "Cracked road surface near flyover",
-    description:
-      "The approach road to the flyover has developed severe cracks and minor potholes that worsen with each passing truck.",
+    description: "The approach road to the flyover has developed severe cracks and minor potholes that worsen with each passing truck.",
     priority: "Low",
     status: "Resolved",
     location: "Flyover Approach, Sector 12",
@@ -236,7 +216,7 @@ export const complaints: Complaint[] = [
     date: "2026-06-08",
     citizen: "Rohan Verma",
     officer: "Eng. K. Singh",
-    image: "/cracked-road-surface.png",
+    image: "https://images.pexels.com/photos/259887/pexels-photo-259887.jpeg?auto=compress&cs=tinysrgb&w=600",
     severity: 34,
     coins: 30,
   },
@@ -253,33 +233,14 @@ export interface LeaderboardEntry {
 }
 
 export const leaderboard: LeaderboardEntry[] = [
-  { rank: 1, name: "Priya Nair", avatar: "/placeholder-user.jpg", reports: 148, coins: 12450, successRate: 96, badge: "City Champion" },
-  { rank: 2, name: "Aarav Sharma", avatar: "/placeholder-user.jpg", reports: 132, coins: 10980, successRate: 93, badge: "Community Hero" },
-  { rank: 3, name: "Sneha Iyer", avatar: "/placeholder-user.jpg", reports: 119, coins: 9640, successRate: 94, badge: "Community Hero" },
-  { rank: 4, name: "Rohan Verma", avatar: "/placeholder-user.jpg", reports: 101, coins: 8120, successRate: 89, badge: "Verified Reporter" },
-  { rank: 5, name: "Kabir Khan", avatar: "/placeholder-user.jpg", reports: 94, coins: 7350, successRate: 88, badge: "Verified Reporter" },
-  { rank: 6, name: "Ananya Reddy", avatar: "/placeholder-user.jpg", reports: 87, coins: 6890, successRate: 91, badge: "Verified Reporter" },
-  { rank: 7, name: "Vikram Patel", avatar: "/placeholder-user.jpg", reports: 76, coins: 5980, successRate: 85, badge: "Active Citizen" },
-  { rank: 8, name: "Meera Joshi", avatar: "/placeholder-user.jpg", reports: 68, coins: 5240, successRate: 87, badge: "Active Citizen" },
-]
-
-export interface NotificationItem {
-  id: string
-  type: "approved" | "assigned" | "resolved" | "coins" | "review"
-  title: string
-  message: string
-  time: string
-  read: boolean
-  ticket?: string
-}
-
-export const notifications: NotificationItem[] = [
-  { id: "n1", type: "resolved", title: "Issue Resolved", message: "Your report CTS-2026-0005 (Blocked drain) has been resolved by the municipal team.", time: "2 hours ago", read: false, ticket: "CTS-2026-0005" },
-  { id: "n2", type: "coins", title: "Coins Awarded", message: "You earned 90 reward coins for a verified high-priority report.", time: "2 hours ago", read: false },
-  { id: "n3", type: "assigned", title: "Issue Assigned", message: "CTS-2026-0002 has been assigned to Sanitation Officer T. Rao.", time: "6 hours ago", read: false, ticket: "CTS-2026-0002" },
-  { id: "n4", type: "approved", title: "Complaint Approved", message: "Your report CTS-2026-0004 (Water pipe burst) was approved and marked Critical.", time: "1 day ago", read: true, ticket: "CTS-2026-0004" },
-  { id: "n5", type: "review", title: "Under Review", message: "CTS-2026-0003 (Streetlights out) is now under review by the ward office.", time: "1 day ago", read: true, ticket: "CTS-2026-0003" },
-  { id: "n6", type: "coins", title: "Coins Awarded", message: "You earned 150 reward coins for a resolved critical safety issue.", time: "3 days ago", read: true },
+  { rank: 1, name: "Priya Nair", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 148, coins: 12450, successRate: 96, badge: "City Champion" },
+  { rank: 2, name: "Aarav Sharma", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 132, coins: 10980, successRate: 93, badge: "Community Hero" },
+  { rank: 3, name: "Sneha Iyer", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 119, coins: 9640, successRate: 94, badge: "Community Hero" },
+  { rank: 4, name: "Rohan Verma", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 101, coins: 8120, successRate: 89, badge: "Verified Reporter" },
+  { rank: 5, name: "Kabir Khan", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 94, coins: 7350, successRate: 88, badge: "Verified Reporter" },
+  { rank: 6, name: "Ananya Reddy", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 87, coins: 6890, successRate: 91, badge: "Verified Reporter" },
+  { rank: 7, name: "Vikram Patel", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 76, coins: 5980, successRate: 85, badge: "Active Citizen" },
+  { rank: 8, name: "Meera Joshi", avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100", reports: 68, coins: 5240, successRate: 87, badge: "Active Citizen" },
 ]
 
 export const monthlyReports = [
@@ -367,7 +328,7 @@ export const currentUser = {
   phone: "+91 98765 43210",
   city: "New Delhi",
   state: "Delhi",
-  avatar: "/placeholder-user.jpg",
+  avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200",
   rank: "Community Hero",
   coinBalance: 4280,
   coinsEarned: 10980,

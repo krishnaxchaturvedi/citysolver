@@ -9,12 +9,14 @@ export function AnimatedCounter({
   duration = 1400,
   className,
   decimals = 0,
+  prefix = "",
 }: {
   value: number
   suffix?: string
   duration?: number
   className?: string
   decimals?: number
+  prefix?: string
 }) {
   const [display, setDisplay] = React.useState(0)
   const ref = React.useRef<HTMLSpanElement>(null)
@@ -23,7 +25,6 @@ export function AnimatedCounter({
   React.useEffect(() => {
     const node = ref.current
     if (!node) return
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !started.current) {
@@ -41,18 +42,14 @@ export function AnimatedCounter({
       },
       { threshold: 0.2 },
     )
-
     observer.observe(node)
     return () => observer.disconnect()
   }, [value, duration])
 
-  const formatted = decimals > 0
-    ? display.toFixed(decimals)
-    : Math.floor(display).toLocaleString("en-IN")
-
+  const formatted = decimals > 0 ? display.toFixed(decimals) : Math.floor(display).toLocaleString("en-IN")
   return (
     <span ref={ref} className={className}>
-      {formatted}{suffix}
+      {prefix}{formatted}{suffix}
     </span>
   )
 }
@@ -80,7 +77,6 @@ export function AnimatedProgress({
   React.useEffect(() => {
     const node = ref.current
     if (!node) return
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !started.current) {
@@ -100,17 +96,13 @@ export function AnimatedProgress({
       },
       { threshold: 0.2 },
     )
-
     observer.observe(node)
     return () => observer.disconnect()
   }, [pct, delay, duration])
 
   return (
     <div ref={ref} className={cn("h-2 w-full overflow-hidden rounded-full bg-muted", className)}>
-      <div
-        className={cn("h-full rounded-full transition-none", barClassName)}
-        style={{ width: `${width}%` }}
-      />
+      <div className={cn("h-full rounded-full", barClassName)} style={{ width: `${width}%` }} />
     </div>
   )
 }
@@ -130,7 +122,6 @@ export function AnimatedCard({
   React.useEffect(() => {
     const node = ref.current
     if (!node) return
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -140,7 +131,6 @@ export function AnimatedCard({
       },
       { threshold: 0.1 },
     )
-
     observer.observe(node)
     return () => observer.disconnect()
   }, [delay])

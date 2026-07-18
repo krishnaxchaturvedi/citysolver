@@ -1,326 +1,214 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { Coins, Trophy, Award, Gift, History, TrendingUp, Lock, CircleCheck as CheckCircle2, ArrowRight, Star } from "lucide-react"
-
+import { Gift, Star, Crown, Award, Medal, Trophy, Sparkles, CircleCheck as CheckCircle2, Lock, Coins, TrendingUp } from "lucide-react"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
-
-export const dynamic = 'force-dynamic'
-
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AnimatedCard, AnimatedCounter, AnimatedProgress } from "@/components/ai/animated"
+import { ProfileSkeleton } from "@/components/loading-skeletons"
+import { rewardBadges, achievements, currentUser } from "@/lib/data"
+import { getTierBg, getTierBorder, getTierColor } from "@/lib/score-utils"
 import { cn } from "@/lib/utils"
-import { currentUser, rewardBadges, achievements, complaints } from "@/lib/data"
+import { toast } from "sonner"
 
-const tierColors = {
-  bronze: "bg-amber-700/10 text-amber-700 border-amber-700/30",
-  silver: "bg-gray-400/10 text-gray-600 border-gray-400/30",
-  gold: "bg-yellow-500/10 text-yellow-700 border-yellow-500/30",
-  platinum: "bg-purple-500/10 text-purple-700 border-purple-500/30",
+const tierIcons: Record<string, React.ElementType> = {
+  bronze: Medal, silver: Award, gold: Trophy, platinum: Crown,
 }
 
-const tierGradients = {
-  bronze: "from-amber-700/20 to-amber-900/20",
-  silver: "from-gray-400/20 to-gray-600/20",
-  gold: "from-yellow-400/20 to-yellow-600/20",
-  platinum: "from-purple-400/20 to-purple-600/20",
-}
+const RewardCard = React.memo(function RewardCard({ badge, index, canAfford, onRedeem }: {
+  badge: typeof rewardBadges[number]
+  index: number
+  canAfford: boolean
+  onRedeem: (badge: typeof rewardBadges[number]) => void
+}) {
+  const TierIcon = tierIcons[badge.tier] || Award
+  return (
+    <AnimatedCard key={badge.name} delay={index * 100}>
+      <Card className={cn("relative overflow-hidden transition-all hover:shadow-md", badge.unlocked && "border-success/30")}>
+        <CardContent className="p-4">
+          <div className={cn("mb-3 flex size-12 items-center justify-center rounded-xl", getTierBg(badge.tier))}>
+            <TierIcon className={cn("size-6", getTierColor(badge.tier))} aria-hidden="true" />
+          </div>
+          <p className="font-semibold text-sm">{badge.name}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{badge.description}</p>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="flex items-center gap-1 text-sm font-bold text-warning-foreground">
+              <Coins className="size-3.5" aria-hidden="true" />
+              {badge.cost.toLocaleString("en-IN")}
+            </span>
+            {badge.unlocked ? (
+              <Badge variant="success" className="gap-1">
+                <CheckCircle2 className="size-3" aria-hidden="true" /> Unlocked
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                disabled={!canAfford}
+                onClick={() => onRedeem(badge)}
+                aria-label={`Redeem ${badge.name} for ${badge.cost} coins`}
+              >
+                {canAfford ? "Redeem" : <><Lock className="mr-1 size-3" aria-hidden="true" /> Locked</>}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </AnimatedCard>
+  )
+})
 
-const rewardHistory = [
-  { id: 1, action: "Complaint Submitted", coins: 10, date: "2026-06-23", ticket: "CTS-2026-0006" },
-  { id: 2, action: "Complaint Approved", coins: 50, date: "2026-06-22", ticket: "CTS-2026-0004" },
-  { id: 3, action: "Complaint Resolved", coins: 100, date: "2026-06-21", ticket: "CTS-2026-0005" },
-  { id: 4, action: "Complaint Submitted", coins: 10, date: "2026-06-20", ticket: "CTS-2026-0003" },
-  { id: 5, action: "Complaint Resolved", coins: 100, date: "2026-06-19", ticket: "CTS-2026-0007" },
-  { id: 6, action: "Critical Priority Bonus", coins: 40, date: "2026-06-19", ticket: "CTS-2026-0001" },
-  { id: 7, action: "Complaint Approved", coins: 50, date: "2026-06-18", ticket: "CTS-2026-0001" },
-  { id: 8, action: "Complaint Submitted", coins: 10, date: "2026-06-17", ticket: "CTS-2026-0001" },
-]
+const AchievementCard = React.memo(function AchievementCard({ ach, index }: {
+  ach: typeof achievements[number]
+  index: number
+}) {
+  const pct = Math.round((ach.progress / ach.total) * 100)
+  const completed = ach.progress >= ach.total
+  return (
+    <AnimatedCard key={ach.name} delay={index * 100}>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-lg",
+              completed ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+            )}>
+              {completed ? <CheckCircle2 className="size-5" aria-hidden="true" /> : <Trophy className="size-5" aria-hidden="true" />}
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm">{ach.name}</p>
+              <p className="text-xs text-muted-foreground">{ach.description}</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{ach.progress} / {ach.total}</span>
+              <span className={cn("font-semibold", completed && "text-success")} aria-label={`${pct}% complete`}>{pct}%</span>
+            </div>
+            <AnimatedProgress value={pct} barClassName={completed ? "bg-success" : "bg-primary"} delay={index * 100} />
+          </div>
+        </CardContent>
+      </Card>
+    </AnimatedCard>
+  )
+})
+
+const earningGuide = [
+  { action: "Submit a report", coins: "30-150", icon: Star },
+  { action: "Report verified", coins: "+50", icon: CheckCircle2 },
+  { action: "Issue resolved", coins: "+90", icon: Trophy },
+  { action: "Daily streak", coins: "+10/day", icon: Sparkles },
+] as const
 
 export default function RewardsPage() {
-  const totalAchievements = achievements.length
-  const completedAchievements = achievements.filter(a => a.progress >= a.total).length
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 400)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handleRedeem = React.useCallback((badge: typeof rewardBadges[number]) => {
+    toast.success("Reward redeemed!", {
+      description: `You have unlocked the ${badge.name}.`,
+    })
+  }, [])
+
+  if (loading) {
+    return (
+      <DashboardShell items={citizenNav} label="Citizen Portal" title="Rewards" description="Redeem your contribution coins" user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}>
+        <ProfileSkeleton />
+      </DashboardShell>
+    )
+  }
 
   return (
     <DashboardShell
       items={citizenNav}
       label="Citizen Portal"
       title="Rewards"
-      description="Earn coins and badges for improving your city"
-      user={{
-        name: currentUser.name,
-        detail: currentUser.rank,
-        avatar: currentUser.avatar,
-      }}
+      description="Redeem your contribution coins"
+      user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}
     >
-      <div className="grid gap-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Coins className="size-4 text-primary" />
-                Current Balance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">
-                {currentUser.coinBalance.toLocaleString("en-IN")}
-              </div>
-              <p className="text-xs text-muted-foreground">coins available</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-                <TrendingUp className="size-4 text-success" />
-                Lifetime Earned
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {currentUser.coinsEarned.toLocaleString("en-IN")}
-              </div>
-              <p className="text-xs text-muted-foreground">total coins earned</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Gift className="size-4 text-warning" />
-                Redeemed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {currentUser.coinsRedeemed.toLocaleString("in-IN")}
-              </div>
-              <p className="text-xs text-muted-foreground">coins redeemed</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Trophy className="size-4" />
-                Current Rank
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-base">
-                  {currentUser.rank}
-                </Badge>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Top 2% of citizens</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="achievements" className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
-            <TabsTrigger value="badges">Badges</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="achievements" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Progress & Achievements</CardTitle>
-                <CardDescription>
-                  Complete tasks to unlock badges and earn bonus coins
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-6">
-                {achievements.map((achievement) => {
-                  const isComplete = achievement.progress >= achievement.total
-                  const percentage = Math.min((achievement.progress / achievement.total) * 100, 100)
-
-                  return (
-                    <div key={achievement.name} className="flex gap-4">
-                      <div className={cn(
-                        "flex size-12 shrink-0 items-center justify-center rounded-xl",
-                        isComplete ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                      )}>
-                        {isComplete ? (
-                          <CheckCircle2 className="size-6" />
-                        ) : (
-                          <Award className="size-6" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">{achievement.name}</h4>
-                          <Badge variant={isComplete ? "default" : "secondary"}>
-                            {achievement.progress}/{achievement.total}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                        <Progress value={percentage} className="mt-2 h-2" />
-                      </div>
-                    </div>
-                  )
-                })}
-
-                <Separator />
-
-                <div className="rounded-lg bg-muted/50 p-4 text-center">
-                  <p className="text-sm font-medium">
-                    {completedAchievements} of {totalAchievements} achievements completed
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Complete all achievements to earn the City Champion badge
-                  </p>
+      <AnimatedCard>
+        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex size-14 items-center justify-center rounded-xl bg-warning/15">
+                  <Coins className="size-7 text-warning-foreground" aria-hidden="true" />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="badges" className="mt-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {rewardBadges.map((badge) => (
-                <Card
-                  key={badge.name}
-                  className={cn(
-                    "relative overflow-hidden transition-all",
-                    badge.unlocked && "ring-2 ring-primary/30",
-                    !badge.unlocked && "opacity-70"
-                  )}
-                >
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br opacity-50",
-                    tierGradients[badge.tier]
-                  )} />
-                  <CardHeader className="relative">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "flex size-14 items-center justify-center rounded-xl border-2",
-                          tierColors[badge.tier],
-                          !badge.unlocked && "grayscale"
-                        )}>
-                          {badge.unlocked ? (
-                            <Star className="size-7" />
-                          ) : (
-                            <Lock className="size-7" />
-                          )}
-                        </div>
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            {badge.name}
-                            {badge.unlocked && <CheckCircle2 className="size-4 text-success" />}
-                          </CardTitle>
-                          <Badge variant="outline" className="mt-1 capitalize">
-                            {badge.tier} Tier
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="relative">
-                    <p className="text-sm text-muted-foreground">{badge.description}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Coins className="size-4 text-warning" />
-                        <span className="font-semibold">{badge.cost.toLocaleString()}</span>
-                        <span className="text-sm text-muted-foreground">coins</span>
-                      </div>
-                      {badge.unlocked ? (
-                        <Button size="sm" variant="secondary">
-                          Redeem
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" disabled>
-                          {currentUser.coinBalance >= badge.cost ? "Unlock" : "Not enough coins"}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History className="size-5" />
-                  Reward History
-                </CardTitle>
-                <CardDescription>Your recent coin transactions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {rewardHistory.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "flex size-10 items-center justify-center rounded-full",
-                          item.coins > 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-                        )}>
-                          {item.coins > 0 ? (
-                            <TrendingUp className="size-5" />
-                          ) : (
-                            <ArrowRight className="size-5" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{item.action}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{item.date}</span>
-                            {item.ticket && (
-                              <>
-                                <span>·</span>
-                                <span className="font-mono">{item.ticket}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className={cn(
-                        "text-lg font-semibold",
-                        item.coins > 0 ? "text-success" : "text-destructive"
-                      )}>
-                        {item.coins > 0 ? "+" : ""}{item.coins}
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  <p className="text-sm text-muted-foreground">Your Coin Balance</p>
+                  <p className="text-3xl font-bold"><AnimatedCounter value={currentUser.coinBalance} /></p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="flex flex-col items-center gap-4 py-6 text-center sm:flex-row sm:text-left">
-            <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-              <Gift className="size-8 text-primary" />
+              </div>
+              <div className="grid grid-cols-3 gap-6 text-center">
+                <div>
+                  <p className="text-xl font-bold text-success"><AnimatedCounter value={currentUser.coinsEarned} /></p>
+                  <p className="text-xs text-muted-foreground">Total Earned</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-destructive"><AnimatedCounter value={currentUser.coinsRedeemed} /></p>
+                  <p className="text-xs text-muted-foreground">Redeemed</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-primary"><AnimatedCounter value={currentUser.coinBalance} /></p>
+                  <p className="text-xs text-muted-foreground">Available</p>
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold">How to Earn More Coins</h3>
-              <p className="text-sm text-muted-foreground">
-                Submit complaints (+10), Get approved (+50), Get resolved (+100), Critical priority bonuses (+40)
-              </p>
-            </div>
-            <Button render={<Link href="/report" />}>
-              Report an Issue
-            </Button>
           </CardContent>
         </Card>
+      </AnimatedCard>
+
+      <div className="mt-6">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Gift className="size-5 text-primary" aria-hidden="true" />Redeem Rewards</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {rewardBadges.map((badge, i) => (
+            <RewardCard
+              key={badge.name}
+              badge={badge}
+              index={i}
+              canAfford={currentUser.coinBalance >= badge.cost}
+              onRedeem={handleRedeem}
+            />
+          ))}
+        </div>
       </div>
+
+      <div className="mt-6">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Sparkles className="size-5 text-primary" aria-hidden="true" />Achievements</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {achievements.map((ach, i) => <AchievementCard key={ach.name} ach={ach} index={i} />)}
+        </div>
+      </div>
+
+      <AnimatedCard delay={500}>
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="size-4 text-primary" aria-hidden="true" />How to Earn Coins</CardTitle>
+            <CardDescription>Contribute to your city and earn rewards</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {earningGuide.map(item => {
+                const Icon = item.icon
+                return (
+                  <div key={item.action} className="rounded-lg border border-border p-3 transition-colors hover:bg-accent/50">
+                    <Icon className="size-5 text-primary" aria-hidden="true" />
+                    <p className="mt-2 text-sm font-medium">{item.action}</p>
+                    <p className="text-xs text-muted-foreground">{item.coins} coins</p>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </AnimatedCard>
     </DashboardShell>
   )
 }

@@ -1,268 +1,216 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
-import { Trophy, Medal, Crown, Coins, FileText, TrendingUp, ArrowUp } from "lucide-react"
-
+import {
+  Trophy, Medal, Award, Crown, Star, TrendingUp,
+  Shield, Zap, Target, Flame,
+} from "lucide-react"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
-
-export const dynamic = 'force-dynamic'
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"
+import { Avatar } from "@/components/ui/avatar"
+import { AnimatedCard, AnimatedCounter } from "@/components/ai/animated"
+import { LeaderboardSkeleton } from "@/components/loading-skeletons"
+import { leaderboard, currentUser } from "@/lib/data"
 import { cn } from "@/lib/utils"
-import { currentUser, leaderboard } from "@/lib/data"
 
-const weeklyLeaderboard = [...leaderboard].map((entry, i) => ({
-  ...entry,
-  weeklyChange: i < 3 ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 2)
-}))
+const rankIcon = React.memo(function rankIcon(rank: number) {
+  if (rank === 1) return <Crown className="size-5 text-warning-foreground" aria-label="First place" />
+  if (rank === 2) return <Medal className="size-5 text-muted-foreground" aria-label="Second place" />
+  if (rank === 3) return <Award className="size-5 text-orange-500" aria-label="Third place" />
+  return <span className="text-sm font-bold text-muted-foreground">{rank}</span>
+})
 
-const monthlyLeaderboard = [...leaderboard].map((entry, i) => ({
-  ...entry,
-  monthlyChange: i < 2 ? Math.floor(Math.random() * 4) + 1 : Math.floor(Math.random() * 3)
-}))
-
-const podiumStyles = [
-  {
-    rank: 1,
-    size: "h-40",
-    order: "order-2",
-    bg: "bg-gradient-to-b from-yellow-400/20 to-yellow-500/10 border-yellow-500/30",
-    trophy: "text-yellow-500",
-  },
-  {
-    rank: 2,
-    size: "h-32",
-    order: "order-1",
-    bg: "bg-gradient-to-b from-gray-400/20 to-gray-500/10 border-gray-500/30",
-    trophy: "text-gray-400",
-  },
-  {
-    rank: 3,
-    size: "h-28",
-    order: "order-3",
-    bg: "bg-gradient-to-b from-amber-600/20 to-amber-700/10 border-amber-700/30",
-    trophy: "text-amber-700",
-  },
-]
-
-function PodiumCard({ entry, rank }: { entry: typeof leaderboard[0]; rank: number }) {
-  const style = podiumStyles[rank - 1]
-
+const PodiumCard = React.memo(function PodiumCard({ entry, delay }: { entry: typeof leaderboard[number]; delay: number }) {
   return (
-    <div className={cn("flex flex-col items-center gap-3", style.order)}>
-      <div className="relative">
-        <div className="relative size-20 overflow-hidden rounded-full border-4 border-background shadow-lg">
-          <Image
-            src={entry.avatar}
-            alt={entry.name}
-            fill
-            className="object-cover"
-            sizes="80px"
-          />
-        </div>
-        <div className={cn(
-          "absolute -bottom-1 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-background shadow-sm",
-          style.bg
-        )}>
-          <span className="font-bold">{rank}</span>
-        </div>
-      </div>
-      <div className="text-center">
-        <p className="font-semibold">{entry.name}</p>
-        <p className="text-xs text-muted-foreground">{entry.badge}</p>
-      </div>
-      <div className={cn("w-full rounded-xl border-2 p-3", style.bg, style.size)}>
-        <div className="flex items-center justify-center gap-1.5 text-lg font-bold">
-          <Coins className={cn("size-5", style.trophy)} />
-          {entry.coins.toLocaleString("en-IN")}
-        </div>
-        <p className="text-center text-xs text-muted-foreground">{entry.reports} reports</p>
-      </div>
-    </div>
-  )
-}
-
-function LeaderboardList({ data }: { data: typeof leaderboard }) {
-  const currentUserRank = leaderboard.findIndex(e => e.name === currentUser.name) + 1
-
-  return (
-    <div className="space-y-2">
-      {data.map((entry) => {
-        const isCurrentUser = entry.name === currentUser.name
-
-        return (
-          <div
-            key={entry.rank}
-            className={cn(
-              "flex items-center gap-4 rounded-xl border p-4 transition-all hover:border-primary/30 hover:shadow-sm",
-              isCurrentUser && "border-primary bg-primary/5"
-            )}
-          >
-            <div className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-full font-bold",
-              entry.rank === 1 && "bg-yellow-500/20 text-yellow-700",
-              entry.rank === 2 && "bg-gray-400/20 text-gray-600",
-              entry.rank === 3 && "bg-amber-600/20 text-amber-700",
-              entry.rank > 3 && "bg-muted"
-            )}>
-              {entry.rank}
+    <AnimatedCard key={entry.name} delay={delay}>
+      <Card className={cn(
+        "relative overflow-hidden text-center",
+        entry.rank === 1 && "border-warning/30 bg-gradient-to-b from-warning/10 to-transparent",
+        entry.rank === 2 && "border-muted-foreground/20",
+        entry.rank === 3 && "border-orange-500/20",
+      )}>
+        <CardContent className="p-6">
+          <div className="mb-3 flex justify-center">{rankIcon(entry.rank)}</div>
+          <Avatar src={entry.avatar} alt={`${entry.name} avatar`} className={cn("mx-auto size-16", entry.rank === 1 && "ring-4 ring-warning/30")} />
+          <p className="mt-3 font-semibold">{entry.name}</p>
+          <Badge variant="outline" className="mt-1 text-xs">{entry.badge}</Badge>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-lg font-bold">{entry.reports}</p>
+              <p className="text-xs text-muted-foreground">Reports</p>
             </div>
-
-            <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-              <Image
-                src={entry.avatar}
-                alt={entry.name}
-                fill
-                className="object-cover"
-                sizes="48px"
-              />
+            <div>
+              <p className="text-lg font-bold text-warning-foreground">{entry.coins.toLocaleString("en-IN")}</p>
+              <p className="text-xs text-muted-foreground">Coins</p>
             </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-medium truncate">{entry.name}</p>
-                {isCurrentUser && <Badge variant="secondary">You</Badge>}
-              </div>
-              <p className="text-xs text-muted-foreground">{entry.badge}</p>
-            </div>
-
-            <div className="hidden items-center gap-4 sm:flex">
-              <div className="text-center">
-                <p className="font-semibold">{entry.reports}</p>
-                <p className="text-xs text-muted-foreground">Reports</p>
-              </div>
-              <div className="text-center">
-                <p className="font-semibold text-success">{entry.successRate}%</p>
-                <p className="text-xs text-muted-foreground">Success</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-lg font-bold">
-              <Coins className="size-5 text-warning" />
-              {entry.coins.toLocaleString("en-IN")}
+            <div>
+              <p className="text-lg font-bold text-success">{entry.successRate}%</p>
+              <p className="text-xs text-muted-foreground">Success</p>
             </div>
           </div>
-        )
-      })}
+        </CardContent>
+      </Card>
+    </AnimatedCard>
+  )
+})
+
+const LeaderRow = React.memo(function LeaderRow({ entry, isCurrentUser }: { entry: typeof leaderboard[number]; isCurrentUser: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50 focus-within:outline-2 focus-within:outline-ring",
+        isCurrentUser && "border-primary/30 bg-primary/5"
+      )}
+    >
+      <div className="flex w-8 items-center justify-center">{rankIcon(entry.rank)}</div>
+      <Avatar src={entry.avatar} alt={`${entry.name} avatar`} className="size-10" />
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm">{entry.name}</p>
+        <p className="text-xs text-muted-foreground">{entry.badge}</p>
+      </div>
+      <div className="hidden sm:flex items-center gap-6 text-sm">
+        <div className="text-center">
+          <p className="font-semibold">{entry.reports}</p>
+          <p className="text-xs text-muted-foreground">Reports</p>
+        </div>
+        <div className="text-center">
+          <p className="font-semibold text-success">{entry.successRate}%</p>
+          <p className="text-xs text-muted-foreground">Success</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 text-right">
+        <span className="font-bold text-warning-foreground">{entry.coins.toLocaleString("en-IN")}</span>
+        <Star className="size-3.5 fill-warning text-warning-foreground" aria-hidden="true" />
+      </div>
     </div>
   )
-}
+})
+
+const categoryLeaders = [
+  { icon: Flame, label: "Most Active Reporter", name: "Priya Nair", value: "148 reports", color: "text-destructive" },
+  { icon: Shield, label: "Highest Accuracy", name: "Priya Nair", value: "96% verified", color: "text-success" },
+  { icon: Zap, label: "Fastest Responder", name: "Sneha Iyer", value: "94% response", color: "text-primary" },
+] as const
 
 export default function LeaderboardPage() {
+  const [period, setPeriod] = React.useState<"month" | "all">("month")
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 400)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const top3 = React.useMemo(() => leaderboard.slice(0, 3), [])
+  const fullList = React.useMemo(() => leaderboard, [])
+
+  if (loading) {
+    return (
+      <DashboardShell items={citizenNav} label="Citizen Portal" title="Leaderboard" description="Top civic contributors in your city" user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}>
+        <LeaderboardSkeleton />
+      </DashboardShell>
+    )
+  }
+
   return (
     <DashboardShell
       items={citizenNav}
       label="Citizen Portal"
       title="Leaderboard"
-      description="Top civic contributors making a difference"
-      user={{
-        name: currentUser.name,
-        detail: currentUser.rank,
-        avatar: currentUser.avatar,
-      }}
+      description="Top civic contributors in your city"
+      user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}
     >
-      <div className="grid gap-6">
-        <Card className="bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="py-6">
-            <div className="flex flex-col items-center gap-4 sm:flex-row">
-              <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-                <Trophy className="size-8 text-primary" />
+      <AnimatedCard>
+        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="relative">
+                <Avatar src={currentUser.avatar} alt={currentUser.name} className="size-16 ring-4 ring-primary/20" />
+                <span className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground" aria-label="Your rank: 2">2</span>
               </div>
-              <div className="flex-1 text-center sm:text-left">
-                <h3 className="text-lg font-semibold">Your Rank: #{leaderboard.findIndex(e => e.name === currentUser.name) + 1}</h3>
-                <p className="text-sm text-muted-foreground">
-                  You&apos;re in the top 2% of all citizens with {currentUser.coinBalance.toLocaleString("en-IN")} coins
-                </p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold">{currentUser.name}</h2>
+                  <Badge variant="secondary" className="gap-1"><Trophy className="size-3" aria-hidden="true" /> {currentUser.rank}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">You are ranked #2 this month — 132 reports, 118 resolved</p>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{currentUser.totalReports}</p>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-primary"><AnimatedCounter value={currentUser.totalReports} /></p>
                   <p className="text-xs text-muted-foreground">Reports</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-success">
-                    {Math.round((currentUser.resolved / currentUser.totalReports) * 100)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">Success</p>
+                <div>
+                  <p className="text-2xl font-bold text-success"><AnimatedCounter value={currentUser.resolved} /></p>
+                  <p className="text-xs text-muted-foreground">Resolved</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-warning-foreground"><AnimatedCounter value={currentUser.coinBalance} /></p>
+                  <p className="text-xs text-muted-foreground">Coins</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
+      </AnimatedCard>
 
-        <Card>
+      <div className="mt-6 flex gap-2" role="group" aria-label="Select leaderboard period">
+        {(["month", "all"] as const).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            aria-pressed={period === p}
+            className={cn(
+              "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
+              period === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            {p === "month" ? "This Month" : "All Time"}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {top3.map((entry, i) => <PodiumCard key={entry.name} entry={entry} delay={i * 120} />)}
+      </div>
+
+      <AnimatedCard delay={400}>
+        <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Crown className="size-5 text-yellow-500" />
-              Top Contributors
-            </CardTitle>
-            <CardDescription>This week&apos;s champions</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="size-4 text-primary" aria-hidden="true" />Full Ranking</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end justify-center gap-6">
-              {leaderboard.slice(0, 3).map((entry, i) => (
-                <PodiumCard key={entry.name} entry={entry} rank={i + 1} />
-              ))}
+            <div className="space-y-2">
+              {fullList.map(entry => <LeaderRow key={entry.name} entry={entry} isCurrentUser={entry.name === currentUser.name} />)}
             </div>
           </CardContent>
         </Card>
+      </AnimatedCard>
 
-        <Tabs defaultValue="weekly" className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="weekly">This Week</TabsTrigger>
-            <TabsTrigger value="monthly">This Month</TabsTrigger>
-            <TabsTrigger value="alltime">All Time</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="weekly" className="mt-4">
-            <LeaderboardList data={weeklyLeaderboard} />
-          </TabsContent>
-
-          <TabsContent value="monthly" className="mt-4">
-            <LeaderboardList data={monthlyLeaderboard} />
-          </TabsContent>
-
-          <TabsContent value="alltime" className="mt-4">
-            <LeaderboardList data={leaderboard} />
-          </TabsContent>
-        </Tabs>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="flex items-center gap-4 py-6">
-              <FileText className="size-10 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{leaderboard.reduce((acc, e) => acc + e.reports, 0).toLocaleString("en-IN")}</p>
-                <p className="text-sm text-muted-foreground">Total Reports</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex items-center gap-4 py-6">
-              <Coins className="size-10 text-warning" />
-              <div>
-                <p className="text-2xl font-bold">{leaderboard.reduce((acc, e) => acc + e.coins, 0).toLocaleString("en-IN")}</p>
-                <p className="text-sm text-muted-foreground">Coins Distributed</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex items-center gap-4 py-6">
-              <TrendingUp className="size-10 text-success" />
-              <div>
-                <p className="text-2xl font-bold">{Math.round(leaderboard.reduce((acc, e) => acc + e.successRate, 0) / leaderboard.length)}%</p>
-                <p className="text-sm text-muted-foreground">Avg Success Rate</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {categoryLeaders.map((cat, i) => {
+          const Icon = cat.icon
+          return (
+            <AnimatedCard key={cat.label} delay={i * 100}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("flex size-10 items-center justify-center rounded-lg bg-muted/50", cat.color)}>
+                      <Icon className="size-5" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{cat.label}</p>
+                      <p className="text-sm font-semibold">{cat.name}</p>
+                      <p className="text-xs text-muted-foreground">{cat.value}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </AnimatedCard>
+          )
+        })}
       </div>
     </DashboardShell>
   )

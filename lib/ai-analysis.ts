@@ -31,7 +31,7 @@ export interface DuplicateMatch {
   distance: string
   similarity: number
   assignedOfficer: string
-  currentStatus: string
+  currentStatus: Complaint["status"]
 }
 
 const priorityScores: Record<Priority, number> = {
@@ -47,7 +47,6 @@ const departments: Record<CategoryKey, string> = {
   "Broken Streetlight": "Electrical & Lighting Division",
   "Water Leakage": "Water Works & Plumbing",
   "Drainage Issue": "Drainage & Storm Water Division",
-  "Illegal Dumping:": "Sanitation & Waste Management",
   "Illegal Dumping": "Sanitation & Waste Management",
   "Public Safety": "Public Safety & Emergency Services",
   Other: "General Municipal Services",
@@ -197,7 +196,6 @@ const categoryReasoning: Record<CategoryKey, (desc: string, priority: Priority) 
     reasons.push("Monsoon preparedness protocol: drainage failures in this sector have a 65% recurrence rate within 30 days.")
     return reasons.slice(0, 4)
   },
-  "Illegal Dumping:": (desc, priority) => { return [] },
   "Illegal Dumping": (desc, priority) => {
     const reasons: string[] = []
     if (desc.toLowerCase().includes("construction") || desc.toLowerCase().includes("debris")) reasons.push(`AI flagged this as ${priority} priority because construction debris indicates a commercial violation, not a residential one.`)
@@ -223,7 +221,7 @@ const categoryReasoning: Record<CategoryKey, (desc: string, priority: Priority) 
   },
 }
 
-const rootCauses: Record<CategoryKey, string[]> = {
+const rootCauses: Record<CategoryKey, string> = {
   Pothole: "Root cause analysis: Prolonged water seepage has weakened the road base, compounded by heavy vehicle traffic and insufficient drainage. The subgrade layer has likely degraded, requiring full-depth repair rather than surface patching.",
   Garbage: "Root cause analysis: Collection route disruption likely caused by truck breakdown or crew shortage. The waste accumulation pattern suggests a missed collection cycle rather than increased generation.",
   "Broken Streetlight": "Root cause analysis: Multiple fixture failure along a single stretch indicates a upstream electrical fault — likely a damaged underground cable or failed control panel. Individual bulb replacement will not resolve the issue.",
