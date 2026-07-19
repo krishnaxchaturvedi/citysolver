@@ -4,20 +4,15 @@ import * as React from "react"
 import Link from "next/link"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { citizenNav } from "@/components/dashboard/nav-config"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { currentUser, complaints } from "@/lib/data"
 import { AnimatedCounter, AnimatedCard } from "@/components/ai/animated"
 import { DashboardSkeleton } from "@/components/loading-skeletons"
 import { EmptyState } from "@/components/ui/states"
 import { PriorityBadge, StatusBadge } from "@/components/status-badges"
+import { useAuth } from "@/lib/supabase/auth-context"
+import { useComplaints } from "@/lib/supabase/use-complaints"
 import { ListChecks } from "lucide-react"
-
-const stats = [
-  { label: "Total Reports", value: currentUser.totalReports, suffix: "" },
-  { label: "Resolved", value: currentUser.resolved, suffix: "" },
-  { label: "Pending", value: currentUser.pending, suffix: "" },
-  { label: "Coins", value: currentUser.coinBalance, suffix: "" },
-] as const
 
 const StatCard = React.memo(function StatCard({ label, value, suffix, delay }: { label: string; value: number; suffix: string; delay: number }) {
   return (
@@ -52,69 +47,80 @@ const ComplaintRow = React.memo(function ComplaintRow({ id, title, location, sta
 })
 
 export default function DashboardPage() {
-  const [loading, setLoading] = React.useState(true)
+  const { profile } = useAuth()
+  const { complaints, loading } = useComplaints()
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 400)
-    return () => clearTimeout(timer)
-  }, [])
+  const stats = React.useMemo(() => {
+    const resolved = complaints.filter(c => c.status === "Resolved").length
+    const pending = complaints.length - resolved
+    return [
+      { label: "Total Reports", value: complaints.length, suffix: "" },
+      { label: "Resolved", value: resolved, suffix: "" },
+      { label: "Pending", value: pending, suffix: "" },
+      { label: "Coins", value: profile?.coins ?? 0, suffix: "" },
+    ]
+  }, [complaints, profile])
 
-  const recentComplaints = React.useMemo(() => complaints.slice(0, 5), [])
+  const recentComplaints = React.useMemo(() => complaints.slice(0, 5), [complaints])
 
   if (loading) {
     return (
+      <ProtectedRoute>
+        <DashboardShell
+          items={citizenNav}
+          label="Citizen Portal"
+          title="Dashboard"
+          description="Welcome back to CitySolver"
+          user={{ name: profile?.full_name || "Citizen", detail: profile?.role || "citizen", avatar: profile?.avatar || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200" }}
+        >
+          <DashboardSkeleton />
+        </DashboardShell>
+      </ProtectedRoute>
+    )
+  }
+
+  return (
+    <ProtectedRoute>
       <DashboardShell
         items={citizenNav}
         label="Citizen Portal"
         title="Dashboard"
         description="Welcome back to CitySolver"
-        user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}
+        user={{ name: profile?.full_name || "Citizen", detail: profile?.role || "citizen", avatar: profile?.avatar || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200" }}
       >
-        <DashboardSkeleton />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((s, i) => (
+            <StatCard key={s.label} label={s.label} value={s.value} suffix={s.suffix} delay={i * 100} />
+          ))}
+        </div>
+        <Card className="mt-6">
+          <CardHeader><CardTitle>Recent Complaints</CardTitle></CardHeader>
+          <CardContent>
+            {recentComplaints.length === 0 ? (
+              <EmptyState
+                icon={ListChecks}
+                title="No complaints yet"
+                description="Your submitted complaints will appear here."
+                action={() => (window.location.href = "/report")}
+                actionLabel="Report an Issue"
+              />
+            ) : (
+              <div className="space-y-2">
+                {recentComplaints.map(c => (
+                  <ComplaintRow
+                    key={c.id}
+                    id={c.id}
+                    title={c.title}
+                    location={c.location}
+                    status={c.status}
+                    priority={c.priority}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </DashboardShell>
-    )
-  }
-
-  return (
-    <DashboardShell
-      items={citizenNav}
-      label="Citizen Portal"
-      title="Dashboard"
-      description="Welcome back to CitySolver"
-      user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}
-    >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s, i) => (
-          <StatCard key={s.label} label={s.label} value={s.value} suffix={s.suffix} delay={i * 100} />
-        ))}
-      </div>
-      <Card className="mt-6">
-        <CardHeader><CardTitle>Recent Complaints</CardTitle></CardHeader>
-        <CardContent>
-          {recentComplaints.length === 0 ? (
-            <EmptyState
-              icon={ListChecks}
-              title="No complaints yet"
-              description="Your submitted complaints will appear here."
-              action={() => (window.location.href = "/report")}
-              actionLabel="Report an Issue"
-            />
-          ) : (
-            <div className="space-y-2">
-              {recentComplaints.map(c => (
-                <ComplaintRow
-                  key={c.id}
-                  id={c.id}
-                  title={c.title}
-                  location={c.location}
-                  status={c.status}
-                  priority={c.priority}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </DashboardShell>
+    </ProtectedRoute>
   )
 }
