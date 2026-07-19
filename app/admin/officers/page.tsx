@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator"
 import { AnimatedCard, AnimatedCounter, AnimatedProgress } from "@/components/ai/animated"
 import { StatCardSkeleton, ChartCardSkeleton, ComplaintRowSkeleton } from "@/components/loading-skeletons"
 import { EmptyState, ErrorState } from "@/components/ui/states"
+import { OfficerDetailPanel } from "@/components/officer-detail-panel"
 import { officers, departmentPerformance, todayPerformance, pendingWorkData, adminUser, type Officer, type Availability } from "@/lib/officer-data"
 import { scoreBgColor, scoreTextColor } from "@/lib/score-utils"
 import { cn } from "@/lib/utils"
@@ -39,7 +40,7 @@ const availabilityMeta: Record<Availability, { color: string; dot: string; badge
   "Off Duty": { color: "text-muted-foreground", dot: "bg-muted-foreground", badge: "bg-muted text-muted-foreground border-border" },
 }
 
-const OfficerCard = React.memo(function OfficerCard({ officer, rank, delay }: { officer: Officer; rank: number; delay: number }) {
+const OfficerCard = React.memo(function OfficerCard({ officer, rank, delay, onView }: { officer: Officer; rank: number; delay: number; onView: (officer: Officer) => void }) {
   const avail = availabilityMeta[officer.availability]
   const [expanded, setExpanded] = React.useState(false)
 
@@ -130,7 +131,7 @@ const OfficerCard = React.memo(function OfficerCard({ officer, rank, delay }: { 
 
           <button
             type="button"
-            onClick={() => setExpanded(!expanded)}
+            onClick={() => onView(officer)}
             aria-expanded={expanded}
             aria-controls={`officer-details-${officer.id}`}
             className="mt-3 flex w-full items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
@@ -212,6 +213,7 @@ export default function OfficerIntelligencePage() {
   const [deptFilter, setDeptFilter] = React.useState<string>("all")
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(false)
+  const [selectedOfficer, setSelectedOfficer] = React.useState<Officer | null>(null)
 
   const load = React.useCallback(() => {
     setLoading(true)
@@ -402,7 +404,7 @@ export default function OfficerIntelligencePage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {ranked.map((officer, i) => (
-              <OfficerCard key={officer.id} officer={officer} rank={i + 1} delay={i * 80} />
+              <OfficerCard key={officer.id} officer={officer} rank={i + 1} delay={i * 80} onView={setSelectedOfficer} />
             ))}
           </div>
         )}
@@ -422,6 +424,10 @@ export default function OfficerIntelligencePage() {
             </CardContent>
           </Card>
         </AnimatedCard>
+      )}
+
+      {selectedOfficer && (
+        <OfficerDetailPanel officer={selectedOfficer} onClose={() => setSelectedOfficer(null)} />
       )}
     </DashboardShell>
   )

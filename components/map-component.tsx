@@ -14,6 +14,7 @@ import {
   type FacilityType,
   getNearbyComplaints,
   getNearbyFacilities,
+  intensityColor,
 } from "@/lib/map-data"
 
 function getMarkerColor(priority: Priority): string {
@@ -163,6 +164,31 @@ function HeatmapLayer({ complaints }: { complaints: Complaint[] }) {
   )
 }
 
+function IntensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
+  return (
+    <>
+      {complaints.map(c => {
+        const color = intensityColor(c.severity)
+        const radius = 200 + c.severity * 3
+        const opacity = 0.15 + (c.severity / 100) * 0.3
+        return (
+          <Circle
+            key={`intensity-${c.id}`}
+            center={[c.lat, c.lng]}
+            radius={radius}
+            pathOptions={{
+              color,
+              fillColor: color,
+              fillOpacity: opacity,
+              stroke: false,
+            }}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 function WardHeatmapLayer() {
   return (
     <>
@@ -201,19 +227,24 @@ function WardHeatmapLayer() {
 function DensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
   return (
     <>
-      {complaints.map(c => (
-        <Circle
-          key={`density-${c.id}`}
-          center={[c.lat, c.lng]}
-          radius={400}
-          pathOptions={{
-            color: "#8b5cf6",
-            fillColor: "#8b5cf6",
-            fillOpacity: 0.2,
-            stroke: false,
-          }}
-        />
-      ))}
+      {complaints.map(c => {
+        const color = intensityColor(c.severity)
+        const radius = 250 + c.severity * 2
+        const opacity = 0.12 + (c.severity / 100) * 0.28
+        return (
+          <Circle
+            key={`density-${c.id}`}
+            center={[c.lat, c.lng]}
+            radius={radius}
+            pathOptions={{
+              color,
+              fillColor: color,
+              fillOpacity: opacity,
+              stroke: false,
+            }}
+          />
+        )
+      })}
     </>
   )
 }

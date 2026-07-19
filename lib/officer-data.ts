@@ -197,3 +197,202 @@ export const adminUser = {
   rank: "City Administrator",
   avatar: "https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=200",
 }
+
+export interface OfficerWeeklyPerformance {
+  week: string
+  resolved: number
+  assigned: number
+  efficiency: number
+}
+
+export interface OfficerMonthlyPerformance {
+  month: string
+  resolved: number
+  assigned: number
+  avgResolutionHours: number
+}
+
+export interface OfficerCompletionTrend {
+  day: string
+  completed: number
+  pending: number
+}
+
+export interface OfficerRoutePoint {
+  name: string
+  time: string
+  status: "completed" | "current" | "upcoming"
+  complaintId?: string
+}
+
+export interface OfficerDetail {
+  weeklyPerformance: OfficerWeeklyPerformance[]
+  monthlyPerformance: OfficerMonthlyPerformance[]
+  completionTrend: OfficerCompletionTrend[]
+  currentRoute: OfficerRoutePoint[]
+  currentAssignment: { complaintId: string; title: string; location: string; startedAt: string; eta: string } | null
+  pendingBacklog: number
+  workloadPrediction: { nextWeekPct: number; trend: "rising" | "stable" | "declining"; recommendation: string }
+  departmentEfficiency: number
+}
+
+const officerDetails: Record<string, OfficerDetail> = {
+  "OFC-001": {
+    weeklyPerformance: [
+      { week: "W1", resolved: 18, assigned: 22, efficiency: 82 },
+      { week: "W2", resolved: 22, assigned: 25, efficiency: 88 },
+      { week: "W3", resolved: 20, assigned: 24, efficiency: 83 },
+      { week: "W4", resolved: 24, assigned: 26, efficiency: 92 },
+    ],
+    monthlyPerformance: [
+      { month: "Jan", resolved: 72, assigned: 85, avgResolutionHours: 62 },
+      { month: "Feb", resolved: 78, assigned: 90, avgResolutionHours: 58 },
+      { month: "Mar", resolved: 85, assigned: 95, avgResolutionHours: 55 },
+      { month: "Apr", resolved: 82, assigned: 92, avgResolutionHours: 56 },
+      { month: "May", resolved: 90, assigned: 98, avgResolutionHours: 54 },
+      { month: "Jun", resolved: 88, assigned: 96, avgResolutionHours: 58 },
+    ],
+    completionTrend: [
+      { day: "Mon", completed: 4, pending: 8 },
+      { day: "Tue", completed: 6, pending: 7 },
+      { day: "Wed", completed: 5, pending: 6 },
+      { day: "Thu", completed: 7, pending: 5 },
+      { day: "Fri", completed: 5, pending: 7 },
+      { day: "Sat", completed: 3, pending: 5 },
+      { day: "Sun", completed: 2, pending: 4 },
+    ],
+    currentRoute: [
+      { name: "MG Road Junction, Sector 14", time: "09:15", status: "completed", complaintId: "CTS-2026-0001" },
+      { name: "Flyover Approach, Sector 12", time: "11:30", status: "current", complaintId: "CTS-2026-0008" },
+      { name: "Park Avenue, Sector 22", time: "14:00", status: "upcoming" },
+      { name: "Central Market, Sector 9", time: "16:30", status: "upcoming" },
+    ],
+    currentAssignment: {
+      complaintId: "CTS-2026-0001",
+      title: "Large pothole near MG Road junction",
+      location: "MG Road Junction, Sector 14",
+      startedAt: "09:15 AM",
+      eta: "11:45 AM",
+    },
+    pendingBacklog: 7,
+    workloadPrediction: { nextWeekPct: 88, trend: "rising", recommendation: "Consider reassigning 2 low-priority cases to OFC-007 to balance workload." },
+    departmentEfficiency: 88,
+  },
+  "OFC-002": {
+    weeklyPerformance: [
+      { week: "W1", resolved: 24, assigned: 26, efficiency: 92 },
+      { week: "W2", resolved: 26, assigned: 28, efficiency: 93 },
+      { week: "W3", resolved: 28, assigned: 30, efficiency: 93 },
+      { week: "W4", resolved: 30, assigned: 31, efficiency: 96 },
+    ],
+    monthlyPerformance: [
+      { month: "Jan", resolved: 95, assigned: 100, avgResolutionHours: 32 },
+      { month: "Feb", resolved: 98, assigned: 102, avgResolutionHours: 30 },
+      { month: "Mar", resolved: 102, assigned: 105, avgResolutionHours: 28 },
+      { month: "Apr", resolved: 105, assigned: 108, avgResolutionHours: 29 },
+      { month: "May", resolved: 108, assigned: 110, avgResolutionHours: 27 },
+      { month: "Jun", resolved: 110, assigned: 112, avgResolutionHours: 29 },
+    ],
+    completionTrend: [
+      { day: "Mon", completed: 7, pending: 3 },
+      { day: "Tue", completed: 8, pending: 2 },
+      { day: "Wed", completed: 6, pending: 4 },
+      { day: "Thu", completed: 9, pending: 1 },
+      { day: "Fri", completed: 7, pending: 2 },
+      { day: "Sat", completed: 4, pending: 1 },
+      { day: "Sun", completed: 0, pending: 0 },
+    ],
+    currentRoute: [
+      { name: "Central Market, Sector 9", time: "08:45", status: "completed", complaintId: "CTS-2026-0002" },
+      { name: "School Road, Sector 7", time: "10:30", status: "current", complaintId: "CTS-2026-0005" },
+      { name: "Plot 44, Sector 31", time: "13:00", status: "upcoming" },
+    ],
+    currentAssignment: {
+      complaintId: "CTS-2026-0002",
+      title: "Overflowing garbage bins at market",
+      location: "Central Market, Sector 9",
+      startedAt: "08:45 AM",
+      eta: "10:15 AM",
+    },
+    pendingBacklog: 1,
+    workloadPrediction: { nextWeekPct: 62, trend: "stable", recommendation: "Workload is well-balanced. Maintain current assignment rate." },
+    departmentEfficiency: 96,
+  },
+  "OFC-003": {
+    weeklyPerformance: [
+      { week: "W1", resolved: 12, assigned: 20, efficiency: 60 },
+      { week: "W2", resolved: 14, assigned: 22, efficiency: 64 },
+      { week: "W3", resolved: 13, assigned: 21, efficiency: 62 },
+      { week: "W4", resolved: 15, assigned: 22, efficiency: 68 },
+    ],
+    monthlyPerformance: [
+      { month: "Jan", resolved: 48, assigned: 75, avgResolutionHours: 78 },
+      { month: "Feb", resolved: 52, assigned: 80, avgResolutionHours: 76 },
+      { month: "Mar", resolved: 55, assigned: 82, avgResolutionHours: 74 },
+      { month: "Apr", resolved: 58, assigned: 85, avgResolutionHours: 72 },
+      { month: "May", resolved: 60, assigned: 88, avgResolutionHours: 70 },
+      { month: "Jun", resolved: 62, assigned: 90, avgResolutionHours: 74 },
+    ],
+    completionTrend: [
+      { day: "Mon", completed: 2, pending: 13 },
+      { day: "Tue", completed: 3, pending: 14 },
+      { day: "Wed", completed: 1, pending: 15 },
+      { day: "Thu", completed: 4, pending: 12 },
+      { day: "Fri", completed: 2, pending: 13 },
+      { day: "Sat", completed: 1, pending: 11 },
+      { day: "Sun", completed: 0, pending: 10 },
+    ],
+    currentRoute: [
+      { name: "Green Park Lane, Sector 18", time: "09:00", status: "current", complaintId: "CTS-2026-0004" },
+      { name: "School Road, Sector 7", time: "12:00", status: "upcoming" },
+      { name: "Flyover Approach, Sector 12", time: "15:00", status: "upcoming" },
+    ],
+    currentAssignment: {
+      complaintId: "CTS-2026-0004",
+      title: "Major water pipe burst flooding lane",
+      location: "Green Park Lane, Sector 18",
+      startedAt: "09:00 AM",
+      eta: "12:30 PM",
+    },
+    pendingBacklog: 12,
+    workloadPrediction: { nextWeekPct: 97, trend: "rising", recommendation: "Critical: workload approaching capacity. Reassign 4 cases to available officers immediately." },
+    departmentEfficiency: 78,
+  },
+}
+
+export function getOfficerDetail(id: string): OfficerDetail {
+  return officerDetails[id] || {
+    weeklyPerformance: [
+      { week: "W1", resolved: 15, assigned: 18, efficiency: 83 },
+      { week: "W2", resolved: 17, assigned: 20, efficiency: 85 },
+      { week: "W3", resolved: 16, assigned: 19, efficiency: 84 },
+      { week: "W4", resolved: 18, assigned: 21, efficiency: 86 },
+    ],
+    monthlyPerformance: [
+      { month: "Jan", resolved: 60, assigned: 72, avgResolutionHours: 50 },
+      { month: "Feb", resolved: 65, assigned: 75, avgResolutionHours: 48 },
+      { month: "Mar", resolved: 70, assigned: 80, avgResolutionHours: 46 },
+      { month: "Apr", resolved: 68, assigned: 78, avgResolutionHours: 47 },
+      { month: "May", resolved: 72, assigned: 82, avgResolutionHours: 45 },
+      { month: "Jun", resolved: 75, assigned: 85, avgResolutionHours: 44 },
+    ],
+    completionTrend: [
+      { day: "Mon", completed: 4, pending: 6 },
+      { day: "Tue", completed: 5, pending: 5 },
+      { day: "Wed", completed: 3, pending: 7 },
+      { day: "Thu", completed: 6, pending: 4 },
+      { day: "Fri", completed: 4, pending: 6 },
+      { day: "Sat", completed: 2, pending: 3 },
+      { day: "Sun", completed: 1, pending: 2 },
+    ],
+    currentRoute: [
+      { name: "Sector 22", time: "10:00", status: "completed" },
+      { name: "Sector 5", time: "13:00", status: "current" },
+      { name: "Sector 31", time: "16:00", status: "upcoming" },
+    ],
+    currentAssignment: null,
+    pendingBacklog: 5,
+    workloadPrediction: { nextWeekPct: 75, trend: "stable", recommendation: "Workload is manageable. Monitor for any sudden spikes." },
+    departmentEfficiency: 85,
+  }
+}

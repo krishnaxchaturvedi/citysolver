@@ -174,3 +174,76 @@ export const citizenAchievements = [
 ]
 
 export const currentCitizen = citizens[1]
+
+export interface VolunteerLevel {
+  level: string
+  tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond"
+  progress: number
+  nextLevel: string
+  pointsToNext: number
+  benefits: string[]
+}
+
+export const currentVolunteerLevel: VolunteerLevel = {
+  level: "Platinum Volunteer",
+  tier: "Platinum",
+  progress: 78,
+  nextLevel: "Diamond Volunteer",
+  pointsToNext: 520,
+  benefits: [
+    "Priority complaint processing",
+    "Exclusive community events access",
+    "Monthly recognition certificates",
+    "Direct officer communication channel",
+  ],
+}
+
+export interface CommunityImpact {
+  peopleHelped: number
+  areasImproved: number
+  issuesResolved: number
+  responseTimeSaved: number
+  citizenTrustBuilt: number
+  wardRank: number
+}
+
+export const currentCommunityImpact: CommunityImpact = {
+  peopleHelped: 1240,
+  areasImproved: 8,
+  issuesResolved: 118,
+  responseTimeSaved: 340,
+  citizenTrustBuilt: 94,
+  wardRank: 2,
+}
+
+export interface ReputationTrend {
+  month: string
+  trustScore: number
+  contributionScore: number
+  reports: number
+  resolved: number
+}
+
+export const reputationTrend: ReputationTrend[] = [
+  { month: "Jan", trustScore: 82, contributionScore: 78, reports: 12, resolved: 10 },
+  { month: "Feb", trustScore: 85, contributionScore: 82, reports: 15, resolved: 13 },
+  { month: "Mar", trustScore: 87, contributionScore: 85, reports: 18, resolved: 16 },
+  { month: "Apr", trustScore: 89, contributionScore: 87, reports: 20, resolved: 18 },
+  { month: "May", trustScore: 92, contributionScore: 89, reports: 22, resolved: 20 },
+  { month: "Jun", trustScore: 94, contributionScore: 91, reports: 24, resolved: 21 },
+]
+
+export interface ContributionBreakdown {
+  category: string
+  count: number
+  fill: string
+}
+
+export const contributionBreakdown: ContributionBreakdown[] = [
+  { category: "Pothole", count: 28, fill: "var(--chart-1)" },
+  { category: "Garbage", count: 35, fill: "var(--chart-4)" },
+  { category: "Streetlight", count: 18, fill: "var(--chart-3)" },
+  { category: "Water", count: 22, fill: "var(--chart-2)" },
+  { category: "Drainage", count: 15, fill: "var(--chart-5)" },
+  { category: "Safety", count: 14, fill: "var(--chart-2)" },
+]

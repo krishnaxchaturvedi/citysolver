@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { currentUser, categories, type CategoryKey } from "@/lib/data"
 import { cn } from "@/lib/utils"
-import { Camera, Upload, X, MapPin, Crosshair, ImageOff, Loader as Loader2, CircleCheck as CheckCircle2 } from "lucide-react"
+import { Upload, X, MapPin, Crosshair, ImageOff, Loader as Loader2, CircleCheck as CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
+import { RecommendationPanel } from "@/components/recommendation-panel"
 
 export default function ReportPage() {
   const [category, setCategory] = React.useState<CategoryKey | "">("")
@@ -22,6 +23,9 @@ export default function ReportPage() {
   const [locating, setLocating] = React.useState(false)
   const [coords, setCoords] = React.useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const reportLat = 28.62
+  const reportLng = 77.22
 
   const isValid = React.useMemo(() =>
     category !== "" && description.length >= 20 && description.length <= 500 && location.length >= 3 && image !== null,
@@ -99,126 +103,136 @@ export default function ReportPage() {
       description="File a new civic complaint"
       user={{ name: currentUser.name, detail: currentUser.rank, avatar: currentUser.avatar }}
     >
-      <form onSubmit={handleSubmit} className="max-w-2xl space-y-6" aria-label="Report a civic issue form">
-        <Card>
-          <CardHeader>
-            <CardTitle>Issue Category</CardTitle>
-            <CardDescription>Select the type of civic issue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="radiogroup" aria-label="Issue category">
-              {categories.map(cat => {
-                const Icon = cat.icon
-                const selected = category === cat.key
-                return (
-                  <button
-                    key={cat.key}
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <form onSubmit={handleSubmit} className="space-y-6" aria-label="Report a civic issue form">
+          <Card>
+            <CardHeader>
+              <CardTitle>Issue Category</CardTitle>
+              <CardDescription>Select the type of civic issue</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="radiogroup" aria-label="Issue category">
+                {categories.map(cat => {
+                  const Icon = cat.icon
+                  const selected = category === cat.key
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => handleCategorySelect(cat.key)}
+                      className={cn(
+                        "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
+                        selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                      )}
+                    >
+                      <Icon className="size-6" aria-hidden="true" />
+                      <span className="text-sm font-medium">{cat.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Description</CardTitle>
+              <CardDescription>Describe the issue (20-500 characters)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Label htmlFor="description" className="sr-only">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe the issue..."
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                maxLength={500}
+                className="min-h-32"
+                aria-describedby="desc-counter"
+              />
+              <div id="desc-counter" className={cn("mt-2 flex items-center justify-between text-xs", description.length >= 20 ? "text-success" : "text-muted-foreground")}>
+                <span>{description.length >= 20 ? <span className="flex items-center gap-1"><CheckCircle2 className="size-3" aria-hidden="true" /> Minimum reached</span> : `${description.length}/20 minimum`}</span>
+                <span className="text-muted-foreground">{description.length}/500</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Photo Evidence</CardTitle></CardHeader>
+            <CardContent>
+              {image ? (
+                <div className="relative aspect-video overflow-hidden rounded-xl">
+                  <img src={image} alt="Evidence preview" className="size-full object-cover" />
+                  <Button
                     type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => handleCategorySelect(cat.key)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
-                      selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                    )}
+                    variant="destructive"
+                    size="icon-sm"
+                    className="absolute right-2 top-2"
+                    onClick={removeImage}
+                    aria-label="Remove image"
                   >
-                    <Icon className="size-6" aria-hidden="true" />
-                    <span className="text-sm font-medium">{cat.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                    <X className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex aspect-video flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border">
+                  <ImageOff className="size-8 text-muted-foreground" aria-hidden="true" />
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} aria-label="Upload image">
+                    <Upload className="mr-2 size-4" aria-hidden="true" />Upload Image
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    aria-label="File upload"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-            <CardDescription>Describe the issue (20-500 characters)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Label htmlFor="description" className="sr-only">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe the issue..."
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              maxLength={500}
-              className="min-h-32"
-              aria-describedby="desc-counter"
-            />
-            <div id="desc-counter" className={cn("mt-2 flex items-center justify-between text-xs", description.length >= 20 ? "text-success" : "text-muted-foreground")}>
-              <span>{description.length >= 20 ? <span className="flex items-center gap-1"><CheckCircle2 className="size-3" aria-hidden="true" /> Minimum reached</span> : `${description.length}/20 minimum`}</span>
-              <span className="text-muted-foreground">{description.length}/500</span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader><CardTitle>Location</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <Button type="button" variant="outline" onClick={detectLocation} disabled={locating} aria-label="Auto detect GPS location">
+                {locating ? <><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />Detecting...</> : <><Crosshair className="mr-2 size-4" aria-hidden="true" />Auto Detect GPS</>}
+              </Button>
+              {coords && (
+                <div className="flex items-center gap-2 rounded-lg bg-success/10 p-3 text-success">
+                  <MapPin className="size-4" aria-hidden="true" />
+                  <span className="text-sm font-medium">{coords}</span>
+                </div>
+              )}
+              <Label htmlFor="location" className="sr-only">Address or area</Label>
+              <Input
+                id="location"
+                placeholder="Address / Area"
+                value={location}
+                onChange={e => setLocation(e.target.value)}
+                aria-label="Address or area"
+              />
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader><CardTitle>Photo Evidence</CardTitle></CardHeader>
-          <CardContent>
-            {image ? (
-              <div className="relative aspect-video overflow-hidden rounded-xl">
-                <img src={image} alt="Evidence preview" className="size-full object-cover" />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon-sm"
-                  className="absolute right-2 top-2"
-                  onClick={removeImage}
-                  aria-label="Remove image"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex aspect-video flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border">
-                <ImageOff className="size-8 text-muted-foreground" aria-hidden="true" />
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} aria-label="Upload image">
-                  <Upload className="mr-2 size-4" aria-hidden="true" />Upload Image
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  aria-label="File upload"
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Location</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <Button type="button" variant="outline" onClick={detectLocation} disabled={locating} aria-label="Auto detect GPS location">
-              {locating ? <><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />Detecting...</> : <><Crosshair className="mr-2 size-4" aria-hidden="true" />Auto Detect GPS</>}
+          <div className="flex justify-end gap-3">
+            <Button type="submit" disabled={submitting} aria-label="Submit report">
+              {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />Submitting...</> : "Submit Report"}
             </Button>
-            {coords && (
-              <div className="flex items-center gap-2 rounded-lg bg-success/10 p-3 text-success">
-                <MapPin className="size-4" aria-hidden="true" />
-                <span className="text-sm font-medium">{coords}</span>
-              </div>
-            )}
-            <Label htmlFor="location" className="sr-only">Address or area</Label>
-            <Input
-              id="location"
-              placeholder="Address / Area"
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              aria-label="Address or area"
-            />
-          </CardContent>
-        </Card>
+          </div>
+        </form>
 
-        <div className="flex justify-end gap-3">
-          <Button type="submit" disabled={submitting} aria-label="Submit report">
-            {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />Submitting...</> : "Submit Report"}
-          </Button>
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <RecommendationPanel
+            category={category || ""}
+            lat={reportLat}
+            lng={reportLng}
+          />
         </div>
-      </form>
+      </div>
     </DashboardShell>
   )
 }

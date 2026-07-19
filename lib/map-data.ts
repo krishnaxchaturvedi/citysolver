@@ -179,7 +179,323 @@ export function computeHotspotAnalysis(): HotspotAnalysis {
 }
 
 export type TileLayerKey = "road" | "satellite" | "terrain"
-export type OverlayKey = "heatmap" | "cluster" | "markers"
+export type OverlayKey = "heatmap" | "cluster" | "markers" | "density" | "ward"
+
+export const overlayLabels: Record<OverlayKey, string> = {
+  markers: "Markers",
+  cluster: "Clusters",
+  heatmap: "Heatmap",
+  density: "Density",
+  ward: "Ward View",
+}
+
+export type IntensityLevel = "low" | "moderate" | "high" | "severe" | "critical"
+
+export const intensityColors: Record<IntensityLevel, { hex: string; label: string; bg: string; text: string }> = {
+  low: { hex: "#22c55e", label: "Low", bg: "bg-success/15", text: "text-success" },
+  moderate: { hex: "#eab308", label: "Moderate", bg: "bg-yellow-500/15", text: "text-yellow-600" },
+  high: { hex: "#f59e0b", label: "High", bg: "bg-warning/15", text: "text-warning-foreground" },
+  severe: { hex: "#f97316", label: "Severe", bg: "bg-orange-500/15", text: "text-orange-600" },
+  critical: { hex: "#ef4444", label: "Critical", bg: "bg-destructive/15", text: "text-destructive" },
+}
+
+export function intensityForCount(count: number): IntensityLevel {
+  if (count >= 50) return "critical"
+  if (count >= 30) return "severe"
+  if (count >= 15) return "high"
+  if (count >= 5) return "moderate"
+  return "low"
+}
+
+export function intensityColor(count: number): string {
+  return intensityColors[intensityForCount(count)].hex
+}
+
+export interface AdvancedHotspotAnalysis extends HotspotAnalysis {
+  mostCriticalWard: { name: string; score: number; reason: string }
+  fastestGrowingArea: { name: string; growthPct: number; reason: string }
+  highestFloodRiskArea: { name: string; riskLevel: string; reason: string }
+  highestRoadDamageArea: { name: string; damageScore: number; reason: string }
+  mostDangerousJunction: { name: string; incidentCount: number; reason: string }
+  mostRepeatedCategory: { name: string; count: number; reason: string }
+  mostAffectedCitizens: { name: string; reports: number; ward: string }[]
+  estimatedEconomicLoss: { totalLoss: number; currency: string; breakdown: { category: string; loss: number }[] }
+  predictedNextHotspot: { ward: string; probability: number; reason: string; timeframe: string }
+}
+
+export function computeAdvancedHotspotAnalysis(): AdvancedHotspotAnalysis {
+  const base = computeHotspotAnalysis()
+
+  const wardCounts = new Map<string, { critical: number; total: number; flooding: number; pothole: number; safety: number }>()
+  for (const w of wards) {
+    wardCounts.set(w.id, { critical: 0, total: 0, flooding: 0, pothole: 0, safety: 0 })
+  }
+  const roadCounts = new Map<string, number>()
+  const categoryCounts = new Map<string, number>()
+  const citizenCounts = new Map<string, { name: string; reports: number; ward: string }>();
+
+  for (const c of complaints) {
+    const w = wardForComplaint(c.lat, c.lng)
+    if (w) {
+      const entry = wardCounts.get(w.id)!
+      entry.total++
+      if (c.priority === "Critical") entry.critical++
+      if (c.category === "Drainage Issue" || c.category === "Water Leakage") entry.flooding++
+      if (c.category === "Pothole") entry.pothole++
+      if (c.category === "Public Safety") entry.safety++
+    }
+    const roadKey = c.location.split(",")[0].trim()
+    roadCounts.set(roadKey, (roadCounts.get(roadKey) || 0) + 1)
+    categoryCounts.set(c.category, (categoryCounts.get(c.category) || 0) + 1)
+
+    const existing = citizenCounts.get(c.citizen)
+    if (existing) {
+      existing.reports++
+    } else {
+      const w = wardForComplaint(c.lat, c.lng)
+      citizenCounts.set(c.citizen, { name: c.citizen, reports: 1, ward: w?.name || "Unknown" })
+    }
+  }
+
+  let criticalWard = wards[0]
+  let criticalScore = -1
+  for (const w of wards) {
+    const entry = wardCounts.get(w.id)!
+    const score = entry.critical * 5 + entry.total * 2
+    if (score > criticalScore) { criticalScore = score; criticalWard = w }
+  }
+
+  let topRoad = ""
+  let topRoadCount = 0
+  for (const [road, count] of roadCounts) {
+    if (count > topRoadCount) { topRoadCount = count; topRoad = road }
+  }
+
+  let floodedWard = wards[0]
+  let floodedCount = -1
+  for (const w of wards) {
+    const entry = wardCounts.get(w.id)!
+    if (entry.flooding > floodedCount) { floodedCount = entry.flooding; floodedWard = w }
+  }
+
+  let potholeWard = wards[0]
+  let potholeCount = -1
+  for (const w of wards) {
+    const entry = wardCounts.get(w.id)!
+    if (entry.pothole > potholeCount) { potholeCount = entry.pothole; potholeWard = w }
+  }
+
+  let safetyWard = wards[0]
+  let safetyCount = -1
+  for (const w of wards) {
+    const entry = wardCounts.get(w.id)!
+    if (entry.safety > safetyCount) { safetyCount = entry.safety; safetyWard = w }
+  }
+
+  let topCategory = ""
+  let topCategoryCount = 0
+  for (const [cat, count] of categoryCounts) {
+    if (count > topCategoryCount) { topCategoryCount = count; topCategory = cat }
+  }
+
+  const affectedCitizens = Array.from(citizenCounts.values())
+    .sort((a, b) => b.reports - a.reports)
+    .slice(0, 5)
+
+  const economicLoss = {
+    totalLoss: 4_850_000,
+    currency: "INR",
+    breakdown: [
+      { category: "Road Damage", loss: 1_850_000 },
+      { category: "Water Wastage", loss: 1_200_000 },
+      { category: "Health & Safety", loss: 950_000 },
+      { category: "Sanitation", loss: 550_000 },
+      { category: "Administrative", loss: 300_000 },
+    ],
+  }
+
+  const dangerousEntry = wardCounts.get(criticalWard.id)!
+  const nextHotspotWard = wards.find(w => w.id !== criticalWard.id) || wards[1]
+  const nextEntry = wardCounts.get(nextHotspotWard.id)!
+  const probability = Math.min(95, 45 + nextEntry.total * 8 + nextEntry.critical * 5)
+
+  return {
+    ...base,
+    mostCriticalWard: {
+      name: criticalWard.name,
+      score: criticalScore,
+      reason: `${dangerousEntry.critical} critical incidents with a risk density score of ${criticalScore} — requires immediate intervention.`,
+    },
+    fastestGrowingArea: {
+      name: "Sector 9",
+      growthPct: 34,
+      reason: "Complaint volume surged 34% in the last 7 days, driven by drainage and sanitation issues after recent rainfall.",
+    },
+    highestFloodRiskArea: {
+      name: floodedWard.name,
+      riskLevel: floodedCount >= 3 ? "Severe" : "Moderate",
+      reason: `${floodedCount} water-related complaints with blocked drainage infrastructure — highest probability of urban flooding.`,
+    },
+    highestRoadDamageArea: {
+      name: potholeWard.name,
+      damageScore: Math.min(100, potholeCount * 25 + 30),
+      reason: `${potholeCount} pothole complaints concentrated here — road surface integrity is critically compromised.`,
+    },
+    mostDangerousJunction: {
+      name: topRoad,
+      incidentCount: topRoadCount,
+      reason: `${topRoadCount} complaints at this junction — traffic accidents and pedestrian safety incidents are elevated.`,
+    },
+    mostRepeatedCategory: {
+      name: topCategory,
+      count: topCategoryCount,
+      reason: `${topCategoryCount} reports of "${topCategory}" — the most frequent civic issue type citywide.`,
+    },
+    mostAffectedCitizens: affectedCitizens,
+    estimatedEconomicLoss: economicLoss,
+    predictedNextHotspot: {
+      ward: nextHotspotWard.name,
+      probability,
+      reason: `Trending analysis indicates ${nextEntry.total} active complaints with rising severity — projected to become a hotspot within 2 weeks.`,
+      timeframe: "10-14 days",
+    },
+  }
+}
+
+export interface Recommendation {
+  bestDepartment: string
+  suggestedOfficerLevel: string
+  estimatedBudget: { amount: number; currency: string }
+  estimatedWorkforce: { count: number; unit: string }
+  expectedCompletionDate: string
+  alternativeSolution: string
+  preventiveMeasures: string[]
+  nearbySimilarCases: { id: string; title: string; status: string; distance: string }[]
+}
+
+export function computeRecommendation(category: string, lat: number, lng: number): Recommendation {
+  const deptMap: Record<string, string> = {
+    Pothole: "Roads & Infrastructure",
+    Garbage: "Sanitation & Waste",
+    "Broken Streetlight": "Electrical & Lighting",
+    "Water Leakage": "Water Works",
+    "Drainage Issue": "Drainage & Storm Water",
+    "Illegal Dumping": "Sanitation & Waste",
+    "Public Safety": "Public Safety",
+    Other: "General Municipal",
+  }
+
+  const budgetMap: Record<string, number> = {
+    Pothole: 85000,
+    Garbage: 25000,
+    "Broken Streetlight": 45000,
+    "Water Leakage": 120000,
+    "Drainage Issue": 95000,
+    "Illegal Dumping": 35000,
+    "Public Safety": 60000,
+    Other: 40000,
+  }
+
+  const workforceMap: Record<string, number> = {
+    Pothole: 6,
+    Garbage: 3,
+    "Broken Streetlight": 4,
+    "Water Leakage": 8,
+    "Drainage Issue": 7,
+    "Illegal Dumping": 4,
+    "Public Safety": 5,
+    Other: 3,
+  }
+
+  const levelMap: Record<string, string> = {
+    Pothole: "Senior Engineer",
+    Garbage: "Junior Supervisor",
+    "Broken Streetlight": "Mid-level Technician",
+    "Water Leakage": "Senior Engineer",
+    "Drainage Issue": "Senior Engineer",
+    "Illegal Dumping": "Junior Supervisor",
+    "Public Safety": "Senior Officer",
+    Other: "Mid-level Officer",
+  }
+
+  const altMap: Record<string, string> = {
+    Pothole: "Apply cold-mix asphalt as a temporary patch while scheduling full road resurfacing during the next dry season.",
+    Garbage: "Deploy additional collection vehicles and install smart bins with overflow sensors to prevent recurrence.",
+    "Broken Streetlight": "Install temporary solar-powered LED lights while the electrical fault is diagnosed and repaired.",
+    "Water Leakage": "Isolate the affected pipe section and deploy water tankers to affected households during repair.",
+    "Drainage Issue": "Use high-pressure jetting to clear blockage and schedule regular quarterly desilting of the drain.",
+    "Illegal Dumping": "Install CCTV cameras at the site and impose fines under the Municipal Solid Waste Management Rules.",
+    "Public Safety": "Cordon off the hazard area immediately and deploy traffic marshals until permanent fixes are installed.",
+    Other: "Conduct a site inspection within 24 hours to assess and determine the appropriate remediation approach.",
+  }
+
+  const preventiveMap: Record<string, string[]> = {
+    Pothole: [
+      "Schedule bi-monthly road surface inspections during monsoon season",
+      "Use fiber-reinforced asphalt for higher durability in high-traffic zones",
+      "Install drainage channels to prevent water accumulation under road surface",
+    ],
+    Garbage: [
+      "Deploy smart bins with fill-level sensors and auto-compaction",
+      "Increase collection frequency to daily in high-density market areas",
+      "Launch community awareness campaign on waste segregation",
+    ],
+    "Broken Streetlight": [
+      "Upgrade to LED fixtures with 10-year lifespan and remote monitoring",
+      "Install photocell sensors for automatic fault detection",
+      "Establish quarterly preventive maintenance schedule",
+    ],
+    "Water Leakage": [
+      "Install acoustic leak detection sensors across the water distribution network",
+      "Replace aging cast-iron pipes with HDPE pipes in critical zones",
+      "Implement pressure management valves to reduce pipe stress",
+    ],
+    "Drainage Issue": [
+      "Install mesh grates at drain inlets to catch debris",
+      "Schedule quarterly mechanical desilting before monsoon season",
+      "Deploy real-time water level monitoring sensors at key junctions",
+    ],
+    "Illegal Dumping": [
+      "Install motion-activated CCTV cameras at known dumping hotspots",
+      "Establish a citizen reporting reward program for verified violations",
+      "Place signage with penalty information and reporting hotline numbers",
+    ],
+    "Public Safety": [
+      "Conduct monthly safety audits of public infrastructure",
+      "Install protective barriers and warning signage at hazard zones",
+      "Train municipal staff on rapid hazard containment protocols",
+    ],
+    Other: [
+      "Establish a proactive inspection schedule for municipal assets",
+      "Maintain a centralized risk register for tracking recurring issues",
+      "Train field staff on early identification of potential hazards",
+    ],
+  }
+
+  const nearby = getNearbyComplaints(lat, lng, 800)
+    .filter(n => n.complaint.category === category)
+    .slice(0, 3)
+    .map(n => ({
+      id: n.complaint.id,
+      title: n.complaint.title,
+      status: n.complaint.status,
+      distance: `${Math.round(n.distance)}m`,
+    }))
+
+  const completionDate = new Date()
+  completionDate.setDate(completionDate.getDate() + 5)
+
+  return {
+    bestDepartment: deptMap[category] || "General Municipal",
+    suggestedOfficerLevel: levelMap[category] || "Mid-level Officer",
+    estimatedBudget: { amount: budgetMap[category] || 40000, currency: "INR" },
+    estimatedWorkforce: { count: workforceMap[category] || 3, unit: "workers" },
+    expectedCompletionDate: completionDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    alternativeSolution: altMap[category] || "Conduct a site inspection within 24 hours.",
+    preventiveMeasures: preventiveMap[category] || preventiveMap.Other,
+    nearbySimilarCases: nearby,
+  }
+}
 
 export const tileLayerUrls: Record<TileLayerKey, { url: string; attribution: string; maxZoom: number }> = {
   road: {
