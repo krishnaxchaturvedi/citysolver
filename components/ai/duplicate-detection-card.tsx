@@ -19,13 +19,13 @@ import { Button } from "@/components/ui/button"
 import { StatusBadge, PriorityBadge } from "@/components/status-badges"
 import { AnimatedCard, AnimatedProgress, AnimatedCounter } from "@/components/ai/animated"
 import { cn } from "@/lib/utils"
-import type { DuplicateMatch } from "@/lib/ai-analysis"
+import type { DuplicateResult } from "@/lib/ai/engine"
 
 export function DuplicateDetectionCard({
   duplicate,
   onReportAnyway,
 }: {
-  duplicate: DuplicateMatch
+  duplicate: DuplicateResult
   onReportAnyway: () => void
 }) {
   const [action, setAction] = React.useState<"view" | "merge" | "report" | null>(null)

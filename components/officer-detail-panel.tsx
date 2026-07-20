@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AnimatedCard, AnimatedCounter, AnimatedProgress } from "@/components/ai/animated"
 import { getOfficerDetail, type Officer } from "@/lib/officer-data"
+import { OfficerAIPanel } from "@/components/ai/officer-ai-panel"
 import { scoreBgColor, scoreTextColor } from "@/lib/score-utils"
 import { cn } from "@/lib/utils"
 import {
@@ -410,6 +411,8 @@ export function OfficerDetailPanel({ officer, onClose }: { officer: Officer; onC
 
           {activeTab === "prediction" && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <OfficerAIPanel officerId={officer.id} />
+
               <AnimatedCard delay={480}>
                 <Card>
                   <CardHeader className="pb-2">

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { currentUser, complaints, priorityMeta } from "@/lib/data"
 import { PriorityBadge, StatusBadge } from "@/components/status-badges"
 import { HotspotIntelligencePanel } from "@/components/map/hotspot-intelligence-panel"
+import { HotspotPredictionPanel } from "@/components/ai/hotspot-prediction-panel"
 import { intensityColors, type IntensityLevel, type OverlayKey, overlayLabels } from "@/lib/map-data"
 import { MapPin, Layers, Flame, Grid3x3, Building2, CircleDot, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -216,6 +217,7 @@ export default function MapPage() {
         </div>
 
         <div className="space-y-4">
+          <HotspotPredictionPanel />
           <HotspotIntelligencePanel />
         </div>
       </div>

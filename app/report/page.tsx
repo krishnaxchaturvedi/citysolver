@@ -13,9 +13,13 @@ import { Label } from "@/components/ui/label"
 import { categories, type CategoryKey, type Priority } from "@/lib/data"
 import { useAuth } from "@/lib/supabase/auth-context"
 import { createComplaint, generateComplaintId, calculateSeverity, calculateCoins } from "@/lib/supabase/services"
-import { RecommendationPanel } from "@/components/recommendation-panel"
+import { AIRecommendationPanel } from "@/components/ai/ai-recommendation-panel"
+import { AIReasoningPanel } from "@/components/ai/ai-reasoning-panel"
+import { DuplicateDetectionCard } from "@/components/ai/duplicate-detection-card"
+import { runDuplicateDetection, runPriorityEngine } from "@/lib/ai/ai-services"
+import type { DuplicateResult, PriorityResult } from "@/lib/ai/engine"
 import { cn } from "@/lib/utils"
-import { Upload, X, MapPin, Crosshair, ImageOff, Loader as Loader2, CircleCheck as CheckCircle2 } from "lucide-react"
+import { Upload, X, MapPin, Crosshair, ImageOff, Loader as Loader2, CircleCheck as CheckCircle2, Brain } from "lucide-react"
 import { toast } from "sonner"
 
 const reportLat = 28.62
@@ -32,12 +36,40 @@ export default function ReportPage() {
   const [submitting, setSubmitting] = React.useState(false)
   const [locating, setLocating] = React.useState(false)
   const [coords, setCoords] = React.useState<string | null>(null)
+  const [duplicate, setDuplicate] = React.useState<DuplicateResult | null>(null)
+  const [priorityResult, setPriorityResult] = React.useState<PriorityResult | null>(null)
+  const [aiLoading, setAiLoading] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const isValid = React.useMemo(() =>
     category !== "" && description.length >= 20 && description.length <= 500 && location.length >= 3 && image !== null,
     [category, description, location, image]
   )
+
+  // Run AI duplicate detection + priority engine when form has enough data
+  React.useEffect(() => {
+    if (!category || description.length < 20 || !location) {
+      setDuplicate(null)
+      setPriorityResult(null)
+      return
+    }
+    setAiLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const [dup, prio] = await Promise.all([
+          runDuplicateDetection(category as CategoryKey, description.slice(0, 60), description, reportLat, reportLng),
+          runPriorityEngine(category as CategoryKey, description, reportLat, reportLng, user?.id),
+        ])
+        setDuplicate(dup)
+        setPriorityResult(prio)
+      } catch {
+        // AI analysis is best-effort; don't block submission
+      } finally {
+        setAiLoading(false)
+      }
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [category, description, location, user?.id])
 
   const handleFileChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -88,7 +120,7 @@ export default function ReportPage() {
     setSubmitting(true)
     try {
       const id = generateComplaintId()
-      const priority: Priority = "Medium"
+      const priority: Priority = priorityResult?.priority ?? "Medium"
       await createComplaint({
         id,
         category: category as CategoryKey,
@@ -98,7 +130,7 @@ export default function ReportPage() {
         location,
         lat: reportLat,
         lng: reportLng,
-        severity: calculateSeverity(priority),
+        severity: priorityResult?.severity ?? calculateSeverity(priority),
         coins: calculateCoins(priority),
       }, image || undefined)
       toast.success("Issue Reported Successfully!", { description: `Ticket ID: ${id}` })
@@ -108,7 +140,7 @@ export default function ReportPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [isValid, user, category, description, location, image, router])
+  }, [isValid, user, category, description, location, image, router, priorityResult])
 
   return (
     <ProtectedRoute>
@@ -221,8 +253,21 @@ export default function ReportPage() {
             </div>
           </form>
 
-          <div className="lg:sticky lg:top-20 lg:self-start">
-            <RecommendationPanel category={category || ""} lat={reportLat} lng={reportLng} />
+          <div className="lg:sticky lg:top-20 lg:self-start space-y-4">
+            {aiLoading && (
+              <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
+                <Brain className="size-4 animate-pulse" aria-hidden="true" />
+                AI analyzing your report...
+              </div>
+            )}
+            {duplicate && duplicate.duplicateProbability > 40 && (
+              <DuplicateDetectionCard
+                duplicate={duplicate}
+                onReportAnyway={() => {}}
+              />
+            )}
+            {priorityResult && <AIReasoningPanel result={priorityResult} />}
+            <AIRecommendationPanel category={category || ""} lat={reportLat} lng={reportLng} />
           </div>
         </div>
       </DashboardShell>

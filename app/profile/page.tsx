@@ -12,6 +12,8 @@ import { AnimatedCard, AnimatedCounter, AnimatedProgress } from "@/components/ai
 import { ProfileSkeleton } from "@/components/loading-skeletons"
 import { currentUser } from "@/lib/data"
 import { currentCitizen, reputationBadges, citizenAchievements, currentVolunteerLevel, currentCommunityImpact, reputationTrend, contributionBreakdown } from "@/lib/citizen-data"
+import { CitizenAIPanel } from "@/components/ai/citizen-ai-panel"
+import { useAuth } from "@/lib/supabase/auth-context"
 import { scoreBgColor } from "@/lib/score-utils"
 import { cn } from "@/lib/utils"
 
@@ -111,6 +113,7 @@ const impactStats: { icon: React.ElementType; label: string; key: keyof typeof c
 ]
 
 export default function ProfilePage() {
+  const { user } = useAuth()
   const citizen = currentCitizen
   const [loading, setLoading] = React.useState(true)
 
@@ -192,6 +195,10 @@ export default function ProfilePage() {
         {reputationStats.map((s, i) => (
           <ReputationStatCard key={s.label} label={s.label} value={s.value} suffix={s.suffix} icon={s.icon} color={s.color} delay={i * 80} />
         ))}
+      </div>
+
+      <div className="mt-6">
+        {user && <CitizenAIPanel userId={user.id} />}
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

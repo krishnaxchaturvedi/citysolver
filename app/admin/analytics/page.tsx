@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AnimatedCard, AnimatedCounter, AnimatedProgress } from "@/components/ai/animated"
 import { ChartCardSkeleton, StatCardSkeleton } from "@/components/loading-skeletons"
 import { ErrorState } from "@/components/ui/states"
+import { AIInsightsPanel } from "@/components/ai/ai-insights-panel"
 import { adminUser, departmentPerformance, todayPerformance, pendingWorkData } from "@/lib/officer-data"
 import { monthlyReports, categoryBreakdown, priorityDistribution, resolutionTrend, hotspots, impactStats } from "@/lib/data"
 import { scoreBgColor } from "@/lib/score-utils"
@@ -90,6 +91,10 @@ export default function AdminAnalyticsPage() {
             </Card>
           </AnimatedCard>
         ))}
+      </div>
+
+      <div className="mt-6">
+        <AIInsightsPanel />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
