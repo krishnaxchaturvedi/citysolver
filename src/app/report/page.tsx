@@ -1,10 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  Mic, Upload, X, MapPin, Crosshair, ImageOff, Loader2, CheckCircle2,
-  Volume2, Sparkles,
-} from "lucide-react"
+import { Mic, Upload, X, MapPin, Crosshair, ImageOff, Loader as Loader2, CircleCheck as CheckCircle2, Volume2, Sparkles } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

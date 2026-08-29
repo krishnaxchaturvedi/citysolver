@@ -1,8 +1,6 @@
 "use client"
 
-import {
-  Sparkles, FileText, Tag, AlertCircle, Check, Wand2,
-} from "lucide-react"
+import { Sparkles, FileText, Tag, CircleAlert as AlertCircle, Check, Wand as Wand2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
