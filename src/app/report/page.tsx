@@ -13,23 +13,31 @@ import { useSpeechRecognition, type SpeechLang } from "@/hooks/use-speech-recogn
 import { analyzeSpeech, type SpeechAnalysisResult } from "@/lib/speech-analysis"
 import { VoiceRecorder, type RecorderState } from "@/components/report/voice-recorder"
 import { SpeechAnalysisCard } from "@/components/report/speech-analysis-card"
+import { AIAssistantSidebar } from "@/components/ai/ai-assistant-sidebar"
+import { LanguageSwitcher } from "@/components/ui/language-switcher"
+import { useLanguage } from "@/hooks/use-language"
+import { analyzeIntake, type IntakeAnalysisResult } from "@/lib/ai-intake"
+import type { TranslationKey } from "@/lib/i18n"
 
 export default function ReportPage() {
+  const { t } = useLanguage()
   const [category, setCategory] = React.useState<CategoryKey | "">("")
   const [title, setTitle] = React.useState("")
   const [description, setDescription] = React.useState("")
   const [location, setLocation] = React.useState("")
   const [priority, setPriority] = React.useState<Priority | "">("")
   const [imagePreview, setImagePreview] = React.useState<string | null>(null)
+  const [hasImage, setHasImage] = React.useState(false)
   const [submitting, setSubmitting] = React.useState(false)
   const [locating, setLocating] = React.useState(false)
   const [coords, setCoords] = React.useState<string | null>(null)
   const [speechAnalysis, setSpeechAnalysis] = React.useState<SpeechAnalysisResult | null>(null)
   const [analysisApplied, setAnalysisApplied] = React.useState(false)
   const [showVoicePanel, setShowVoicePanel] = React.useState(false)
+  const [intakeResult, setIntakeResult] = React.useState<IntakeAnalysisResult | null>(null)
+  const [intakeLoading, setIntakeLoading] = React.useState(false)
 
   const fileInputRef = React.useRef<HTMLInputElement>(null)
-
   const speech = useSpeechRecognition()
 
   const recorderState: RecorderState = React.useMemo(() => {
@@ -38,6 +46,28 @@ export default function ReportPage() {
     if (speech.transcript) return "stopped"
     return "idle"
   }, [speech.isListening, speech.isPaused, speech.transcript])
+
+  // Run AI intake analysis when form data changes
+  React.useEffect(() => {
+    if (!category && !description && !location) {
+      setIntakeResult(null)
+      return
+    }
+    setIntakeLoading(true)
+    const timer = setTimeout(() => {
+      const result = analyzeIntake({
+        category,
+        description,
+        location,
+        hasCoords: !!coords,
+        hasImage,
+        priority,
+      })
+      setIntakeResult(result)
+      setIntakeLoading(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [category, description, location, coords, hasImage, priority])
 
   // When recording stops, run speech analysis
   React.useEffect(() => {
@@ -60,6 +90,7 @@ export default function ReportPage() {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith("image/")) return
+    setHasImage(true)
     const reader = new FileReader()
     reader.onload = (ev) => setImagePreview(ev.target?.result as string)
     reader.readAsDataURL(file)
@@ -67,6 +98,7 @@ export default function ReportPage() {
 
   const removeImage = React.useCallback(() => {
     setImagePreview(null)
+    setHasImage(false)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }, [])
 
@@ -98,25 +130,21 @@ export default function ReportPage() {
     speech.start()
   }, [speech])
 
-  const handleStopVoice = React.useCallback(() => {
-    speech.stop()
-  }, [speech])
-
+  const handleStopVoice = React.useCallback(() => { speech.stop() }, [speech])
   const handleResetVoice = React.useCallback(() => {
     speech.reset()
     setSpeechAnalysis(null)
     setAnalysisApplied(false)
   }, [speech])
-
-  const handleLangChange = React.useCallback((lang: SpeechLang) => {
-    speech.setLang(lang)
-  }, [speech])
+  const handleLangChange = React.useCallback((lang: SpeechLang) => { speech.setLang(lang) }, [speech])
 
   const isValid = category !== "" && title.length >= 5 && description.length >= 20 && location.length >= 3
 
+  const catKey = (key: CategoryKey): TranslationKey => `cat.${key}` as TranslationKey
+  const priKey = (p: Priority): TranslationKey => `pri.${p}` as TranslationKey
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
@@ -125,27 +153,29 @@ export default function ReportPage() {
             </div>
             <span className="text-lg font-bold">CitySolver</span>
           </div>
-          <Badge variant="outline" className="text-xs">Citizen Portal</Badge>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher compact />
+            <Badge variant="outline" className="text-xs">Citizen Portal</Badge>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Report an Issue</h1>
-          <p className="text-sm text-muted-foreground">File a new civic complaint — type it out or speak it out loud</p>
+          <h1 className="text-2xl font-bold">{t("report.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("report.description")}</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          {/* Main form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Voice input toggle */}
+            {/* Voice input */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Volume2 className="size-5 text-primary" />
-                  Voice Complaint
+                  {t("report.voice_complaint")}
                 </CardTitle>
-                <CardDescription>Speak your complaint — AI will transcribe and auto-fill the form</CardDescription>
+                <CardDescription>{t("report.speak_complaint")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {!showVoicePanel ? (
@@ -158,8 +188,8 @@ export default function ReportPage() {
                       <Mic className="size-7 text-primary" />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm font-medium">Tap to start voice complaint</p>
-                      <p className="text-xs text-muted-foreground">Supports English, Hindi & Hinglish</p>
+                      <p className="text-sm font-medium">{t("report.tap_to_start")}</p>
+                      <p className="text-xs text-muted-foreground">{t("report.supports_languages")}</p>
                     </div>
                   </button>
                 ) : (
@@ -187,8 +217,8 @@ export default function ReportPage() {
             {/* Category */}
             <Card>
               <CardHeader>
-                <CardTitle>Issue Category</CardTitle>
-                <CardDescription>Select the type of civic issue</CardDescription>
+                <CardTitle>{t("report.category")}</CardTitle>
+                <CardDescription>{t("report.issue_category")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -204,7 +234,7 @@ export default function ReportPage() {
                           selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
                         )}
                       >
-                        <span className="text-sm font-medium">{cat.label}</span>
+                        <span className="text-sm font-medium">{t(catKey(cat.key))}</span>
                       </button>
                     )
                   })}
@@ -215,7 +245,7 @@ export default function ReportPage() {
             {/* Title */}
             <Card>
               <CardHeader>
-                <CardTitle>Complaint Title</CardTitle>
+                <CardTitle>{t("report.title")}</CardTitle>
                 <CardDescription>A short summary of the issue</CardDescription>
               </CardHeader>
               <CardContent>
@@ -233,7 +263,7 @@ export default function ReportPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Description</CardTitle>
-                <CardDescription>Describe the issue (20-500 characters)</CardDescription>
+                <CardDescription>{t("report.describe_issue")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
@@ -244,7 +274,7 @@ export default function ReportPage() {
                   className="min-h-32"
                 />
                 <div className={cn("mt-2 flex items-center justify-between text-xs", description.length >= 20 ? "text-success" : "text-muted-foreground")}>
-                  <span>{description.length >= 20 ? <span className="flex items-center gap-1"><CheckCircle2 className="size-3" /> Minimum reached</span> : `${description.length}/20 minimum`}</span>
+                  <span>{description.length >= 20 ? <span className="flex items-center gap-1"><CheckCircle2 className="size-3" /> {t("report.min_reached")}</span> : `${description.length}/20 ${t("report.min_required")}`}</span>
                   <span className="text-muted-foreground">{description.length}/500</span>
                 </div>
               </CardContent>
@@ -253,7 +283,7 @@ export default function ReportPage() {
             {/* Priority */}
             <Card>
               <CardHeader>
-                <CardTitle>Priority</CardTitle>
+                <CardTitle>{t("report.priority")}</CardTitle>
                 <CardDescription>How urgent is this issue?</CardDescription>
               </CardHeader>
               <CardContent>
@@ -270,7 +300,7 @@ export default function ReportPage() {
                           selected ? cn("border-primary", priorityMeta[p].badge) : "border-border hover:border-primary/40",
                         )}
                       >
-                        {p}
+                        {t(priKey(p))}
                       </button>
                     )
                   })}
@@ -280,7 +310,7 @@ export default function ReportPage() {
 
             {/* Photo */}
             <Card>
-              <CardHeader><CardTitle>Photo Evidence</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t("report.photo")}</CardTitle></CardHeader>
               <CardContent>
                 {imagePreview ? (
                   <div className="relative aspect-video overflow-hidden rounded-xl">
@@ -293,7 +323,7 @@ export default function ReportPage() {
                   <div className="flex aspect-video flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border">
                     <ImageOff className="size-8 text-muted-foreground" />
                     <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                      <Upload className="mr-2 size-4" />Upload Image
+                      <Upload className="mr-2 size-4" />{t("report.upload_image")}
                     </Button>
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   </div>
@@ -303,10 +333,10 @@ export default function ReportPage() {
 
             {/* Location */}
             <Card>
-              <CardHeader><CardTitle>Location</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t("report.location")}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <Button type="button" variant="outline" onClick={detectLocation} disabled={locating}>
-                  {locating ? <><Loader2 className="mr-2 size-4 animate-spin" />Detecting...</> : <><Crosshair className="mr-2 size-4" />Auto Detect GPS</>}
+                  {locating ? <><Loader2 className="mr-2 size-4 animate-spin" />{t("report.detecting")}</> : <><Crosshair className="mr-2 size-4" />{t("report.auto_detect")}</>}
                 </Button>
                 {coords && (
                   <div className="flex items-center gap-2 rounded-lg bg-success/10 p-3 text-success">
@@ -314,19 +344,20 @@ export default function ReportPage() {
                     <span className="text-sm font-medium">{coords}</span>
                   </div>
                 )}
-                <Input placeholder="Address / Area" value={location} onChange={(e) => setLocation(e.target.value)} />
+                <Input placeholder={t("report.address_area")} value={location} onChange={(e) => setLocation(e.target.value)} />
               </CardContent>
             </Card>
 
             <div className="flex justify-end gap-3">
               <Button type="submit" disabled={submitting || !isValid}>
-                {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit Report"}
+                {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />{t("report.submitting")}</> : t("report.submit")}
               </Button>
             </div>
           </form>
 
-          {/* Sidebar — AI analysis */}
+          {/* Sidebar */}
           <div className="lg:sticky lg:top-20 lg:self-start space-y-4">
+            {/* AI Speech Analysis */}
             {speechAnalysis && (
               <SpeechAnalysisCard
                 result={speechAnalysis}
@@ -335,27 +366,17 @@ export default function ReportPage() {
               />
             )}
 
+            {/* AI Intake Assistant */}
+            <AIAssistantSidebar result={intakeResult} loading={intakeLoading} />
+
+            {/* Voice status placeholder */}
             {!speechAnalysis && showVoicePanel && recorderState !== "idle" && (
               <Card>
                 <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
                   <Loader2 className="size-6 animate-spin text-primary" />
                   <p className="text-sm text-muted-foreground">
-                    {recorderState === "recording" ? "Recording your complaint..." : recorderState === "paused" ? "Paused" : "Analyzing speech..."}
+                    {recorderState === "recording" ? "Recording..." : recorderState === "paused" ? "Paused" : "Analyzing..."}
                   </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {!showVoicePanel && (
-              <Card>
-                <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-                    <Mic className="size-6 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Voice input ready</p>
-                    <p className="text-xs text-muted-foreground">Start a voice recording to see AI analysis here</p>
-                  </div>
                 </CardContent>
               </Card>
             )}
