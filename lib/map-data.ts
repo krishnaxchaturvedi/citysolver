@@ -5,17 +5,18 @@ export interface Ward {
   name: string
   center: [number, number]
   bounds: [[number, number], [number, number]]
+  polygon: [number, number][]
 }
 
 export const wards: Ward[] = [
-  { id: "w14", name: "Sector 14", center: [28.62, 77.22], bounds: [[28.605, 77.205], [28.635, 77.235]] },
-  { id: "w9", name: "Sector 9", center: [28.63, 77.23], bounds: [[28.615, 77.215], [28.645, 77.245]] },
-  { id: "w22", name: "Sector 22", center: [28.61, 77.21], bounds: [[28.595, 77.195], [28.625, 77.225]] },
-  { id: "w18", name: "Sector 18", center: [28.64, 77.20], bounds: [[28.625, 77.185], [28.655, 77.215]] },
-  { id: "w7", name: "Sector 7", center: [28.60, 77.24], bounds: [[28.585, 77.225], [28.615, 77.255]] },
-  { id: "w31", name: "Sector 31", center: [28.65, 77.25], bounds: [[28.635, 77.235], [28.665, 77.265]] },
-  { id: "w5", name: "Sector 5", center: [28.59, 77.19], bounds: [[28.575, 77.175], [28.605, 77.205]] },
-  { id: "w12", name: "Sector 12", center: [28.66, 77.18], bounds: [[28.645, 77.165], [28.675, 77.195]] },
+  { id: "w14", name: "Sector 14", center: [28.62, 77.22], bounds: [[28.605, 77.205], [28.635, 77.235]], polygon: [[28.605, 77.205], [28.605, 77.235], [28.635, 77.235], [28.635, 77.205]] },
+  { id: "w9", name: "Sector 9", center: [28.63, 77.23], bounds: [[28.615, 77.215], [28.645, 77.245]], polygon: [[28.615, 77.215], [28.615, 77.245], [28.645, 77.245], [28.645, 77.215]] },
+  { id: "w22", name: "Sector 22", center: [28.61, 77.21], bounds: [[28.595, 77.195], [28.625, 77.225]], polygon: [[28.595, 77.195], [28.595, 77.225], [28.625, 77.225], [28.625, 77.195]] },
+  { id: "w18", name: "Sector 18", center: [28.64, 77.20], bounds: [[28.625, 77.185], [28.655, 77.215]], polygon: [[28.625, 77.185], [28.625, 77.215], [28.655, 77.215], [28.655, 77.185]] },
+  { id: "w7", name: "Sector 7", center: [28.60, 77.24], bounds: [[28.585, 77.225], [28.615, 77.255]], polygon: [[28.585, 77.225], [28.585, 77.255], [28.615, 77.255], [28.615, 77.225]] },
+  { id: "w31", name: "Sector 31", center: [28.65, 77.25], bounds: [[28.635, 77.235], [28.665, 77.265]], polygon: [[28.635, 77.235], [28.635, 77.265], [28.665, 77.265], [28.665, 77.235]] },
+  { id: "w5", name: "Sector 5", center: [28.59, 77.19], bounds: [[28.575, 77.175], [28.605, 77.205]], polygon: [[28.575, 77.175], [28.575, 77.205], [28.605, 77.205], [28.605, 77.175]] },
+  { id: "w12", name: "Sector 12", center: [28.66, 77.18], bounds: [[28.645, 77.165], [28.675, 77.195]], polygon: [[28.645, 77.165], [28.645, 77.195], [28.675, 77.195], [28.675, 77.165]] },
 ]
 
 export type FacilityType = "hospital" | "school" | "police"
@@ -178,7 +179,7 @@ export function computeHotspotAnalysis(): HotspotAnalysis {
   }
 }
 
-export type TileLayerKey = "road" | "satellite" | "terrain"
+export type TileLayerKey = "road" | "satellite" | "terrain" | "dark"
 export type OverlayKey = "heatmap" | "cluster" | "markers" | "density" | "ward"
 
 export const overlayLabels: Record<OverlayKey, string> = {
@@ -497,11 +498,12 @@ export function computeRecommendation(category: string, lat: number, lng: number
   }
 }
 
-export const tileLayerUrls: Record<TileLayerKey, { url: string; attribution: string; maxZoom: number }> = {
+export const tileLayerUrls: Record<TileLayerKey, { url: string; attribution: string; maxZoom: number; subdomains?: string[] }> = {
   road: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
+    subdomains: ["a", "b", "c"],
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -512,5 +514,103 @@ export const tileLayerUrls: Record<TileLayerKey, { url: string; attribution: str
     url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
     attribution: "&copy; OpenTopoMap (CC-BY-SA)",
     maxZoom: 17,
+    subdomains: ["a", "b", "c"],
+  },
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
+    maxZoom: 19,
+    subdomains: ["a", "b", "c", "d"],
   },
 }
+
+export const weatherTileUrl =
+  "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=mock"
+export const trafficTileUrl =
+  "https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=mock"
+
+export interface WardStatistic {
+  ward: Ward
+  total: number
+  critical: number
+  high: number
+  resolved: number
+  pending: number
+  avgSeverity: number
+  riskScore: number
+  riskLevel: IntensityLevel
+}
+
+export function computeWardStatistics(): WardStatistic[] {
+  return wards.map(w => {
+    const inWard = complaints.filter(c => {
+      const dLat = (c.lat - w.center[0]) * 111
+      const dLng = (c.lng - w.center[1]) * 111 * Math.cos(w.center[0] * Math.PI / 180)
+      return Math.sqrt(dLat * dLat + dLng * dLng) * 1000 <= 800
+    })
+    const total = inWard.length
+    const critical = inWard.filter(c => c.priority === "Critical").length
+    const high = inWard.filter(c => c.priority === "High").length
+    const resolved = inWard.filter(c => c.status === "Resolved").length
+    const pending = total - resolved
+    const avgSeverity = total > 0 ? Math.round(inWard.reduce((s, c) => s + c.severity, 0) / total) : 0
+    const riskScore = Math.min(100, critical * 25 + high * 12 + pending * 4 + avgSeverity * 0.3)
+    const riskLevel = intensityForCount(riskScore)
+    return { ward: w, total, critical, high, resolved, pending, avgSeverity, riskScore, riskLevel }
+  })
+}
+
+export interface OfficerRouteStop {
+  id: string
+  complaintId: string
+  title: string
+  lat: number
+  lng: number
+  location: string
+  priority: string
+  eta: string
+  distance: string
+  status: "completed" | "current" | "upcoming"
+}
+
+export function computeOfficerRoute(officerName: string): OfficerRouteStop[] {
+  const assigned = complaints.filter(c => c.officer === officerName)
+  if (assigned.length === 0) return []
+  const sorted = [...assigned].sort((a, b) => {
+    const order: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 }
+    return (order[a.priority] ?? 4) - (order[b.priority] ?? 4)
+  })
+  let cumulative = 0
+  return sorted.map((c, i) => {
+    if (i > 0) {
+      cumulative += haversineMeters(sorted[i - 1].lat, sorted[i - 1].lng, c.lat, c.lng)
+    }
+    const status: OfficerRouteStop["status"] = i === 0 ? "completed" : i === 1 ? "current" : "upcoming"
+    return {
+      id: `stop-${i}`,
+      complaintId: c.id,
+      title: c.title,
+      lat: c.lat,
+      lng: c.lng,
+      location: c.location,
+      priority: c.priority,
+      eta: i === 0 ? "Done" : i === 1 ? "~30 min" : `${i * 45} min`,
+      distance: i === 0 ? "0 m" : `${Math.round(cumulative)} m`,
+      status,
+    }
+  })
+}
+
+export interface RestrictedZone {
+  id: string
+  name: string
+  type: "restricted" | "incident" | "buffer"
+  center: [number, number]
+  radius: number
+}
+
+export const restrictedZones: RestrictedZone[] = [
+  { id: "rz1", name: "Restricted: Govt Compound", type: "restricted", center: [28.628, 77.218], radius: 200 },
+  { id: "rz2", name: "Incident Zone: Construction Site", type: "incident", center: [28.64, 77.19], radius: 150 },
+  { id: "rz3", name: "Buffer: Water Treatment Plant", type: "buffer", center: [28.615, 77.238], radius: 250 },
+]

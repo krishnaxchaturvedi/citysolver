@@ -1,21 +1,30 @@
 "use client"
 
 import * as React from "react"
-import { MapContainer, TileLayer, Marker, Popup, Circle, Rectangle, useMap, ZoomControl } from "react-leaflet"
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, Rectangle, Tooltip, useMap, ZoomControl } from "react-leaflet"
 import L from "leaflet"
 import type { Complaint, Priority, CategoryKey } from "@/lib/data"
-import { priorityMeta, categories, complaints as allComplaints } from "@/lib/data"
+import { priorityMeta, complaints as allComplaints } from "@/lib/data"
 import {
   facilities,
   wards,
   tileLayerUrls,
+  weatherTileUrl,
+  trafficTileUrl,
+  restrictedZones,
   type TileLayerKey,
   type OverlayKey,
   type FacilityType,
   getNearbyComplaints,
   getNearbyFacilities,
   intensityColor,
+  intensityForCount,
+  intensityColors,
 } from "@/lib/map-data"
+import { MarkerClusterGroup } from "@/components/map/marker-cluster-group"
+import { HeatLayer } from "@/components/map/heat-layer"
+import { RoutingControl, AnimatedRoute } from "@/components/map/routing-control"
+import { DrawingTools, DrawnShapesLayer, type DrawnShapes } from "@/components/map/drawing-tools"
 
 function getMarkerColor(priority: Priority): string {
   return priorityMeta[priority].mapColor
@@ -42,6 +51,10 @@ const facilityColors: Record<FacilityType, string> = {
   hospital: "#dc2626",
   school: "#2563eb",
   police: "#16a34a",
+}
+
+function complaintEta(priority: Priority): string {
+  return priority === "Critical" ? "1-2 days" : priority === "High" ? "3-5 days" : priority === "Medium" ? "5-10 days" : "10-15 days"
 }
 
 function createComplaintIcon(priority: Priority, category: CategoryKey, highlighted: boolean) {
@@ -87,49 +100,26 @@ function createFacilityIcon(type: FacilityType) {
   })
 }
 
-function createClusterIcon(count: number, maxCount: number) {
-  const ratio = count / maxCount
-  const size = 36 + ratio * 20
-  let color = "#3b82f6"
-  if (ratio > 0.66) color = "#ef4444"
-  else if (ratio > 0.33) color = "#f59e0b"
-  return L.divIcon({
-    className: "cluster-marker",
-    html: `
-      <div style="width:${size}px;height:${size}px;background-color:${color}cc;border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);transition:transform 0.2s;">
-        <span style="color:white;font-weight:700;font-size:${size > 44 ? 15 : 13}px;font-family:system-ui;">${count}</span>
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  })
-}
-
-interface Cluster {
-  lat: number
-  lng: number
-  complaints: Complaint[]
-  count: number
-}
-
-function simpleCluster(items: Complaint[], threshold: number): Cluster[] {
-  const clusters: Cluster[] = []
-  const assigned = new Set<string>()
-  for (const c of items) {
-    if (assigned.has(c.id)) continue
-    const nearby = items.filter(x => {
-      if (assigned.has(x.id)) return false
-      const dLat = (x.lat - c.lat) * 111
-      const dLng = (x.lng - c.lng) * 111 * Math.cos(c.lat * Math.PI / 180)
-      return Math.sqrt(dLat * dLat + dLng * dLng) * 1000 <= threshold
+function createClusterIconFn(maxCount: number) {
+  return (cluster: L.MarkerCluster): L.DivIcon => {
+    const count = cluster.getChildCount()
+    const ratio = maxCount > 0 ? count / maxCount : 0
+    const size = 38 + ratio * 18
+    let color = "#3b82f6"
+    if (ratio > 0.66) color = "#ef4444"
+    else if (ratio > 0.33) color = "#f59e0b"
+    return L.divIcon({
+      className: "cluster-marker",
+      html: `
+        <div style="width:${size}px;height:${size}px;background-color:${color}cc;border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);transition:transform 0.2s;position:relative;">
+          <span style="color:white;font-weight:700;font-size:${size > 46 ? 15 : 13}px;font-family:system-ui;z-index:1;">${count}</span>
+          <div style="position:absolute;inset:-4px;border-radius:50%;border:2px solid ${color};opacity:0.3;animation:cluster-pulse 2s ease-out infinite;"></div>
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     })
-    const group = [c, ...nearby]
-    group.forEach(g => assigned.add(g.id))
-    const lat = group.reduce((s, g) => s + g.lat, 0) / group.length
-    const lng = group.reduce((s, g) => s + g.lng, 0) / group.length
-    clusters.push({ lat, lng, complaints: group, count: group.length })
   }
-  return clusters
 }
 
 function FlyTo({ complaint }: { complaint: Complaint | null }) {
@@ -142,16 +132,15 @@ function FlyTo({ complaint }: { complaint: Complaint | null }) {
   return null
 }
 
-function HeatmapLayer({ complaints }: { complaints: Complaint[] }) {
-  const intensity = (p: Priority) => p === "Critical" ? 0.95 : p === "High" ? 0.7 : p === "Medium" ? 0.45 : 0.25
-  const radius = 280
+function PriorityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
+  const intensity = (p: Priority) => (p === "Critical" ? 0.95 : p === "High" ? 0.7 : p === "Medium" ? 0.45 : 0.25)
   return (
     <>
-      {complaints.map(c => (
+      {complaints.map((c) => (
         <Circle
           key={`heat-${c.id}`}
           center={[c.lat, c.lng]}
-          radius={radius}
+          radius={280}
           pathOptions={{
             color: getMarkerColor(c.priority),
             fillColor: getMarkerColor(c.priority),
@@ -164,25 +153,43 @@ function HeatmapLayer({ complaints }: { complaints: Complaint[] }) {
   )
 }
 
-function IntensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
+function WardLayer() {
   return (
     <>
-      {complaints.map(c => {
-        const color = intensityColor(c.severity)
-        const radius = 200 + c.severity * 3
-        const opacity = 0.15 + (c.severity / 100) * 0.3
+      {wards.map((w) => {
+        const count = allComplaints.filter((c) => {
+          const dLat = (c.lat - w.center[0]) * 111
+          const dLng = (c.lng - w.center[1]) * 111 * Math.cos((w.center[0] * Math.PI) / 180)
+          return Math.sqrt(dLat * dLat + dLng * dLng) * 1000 <= 800
+        }).length
+        const level = intensityForCount(count * 3)
+        const color = intensityColors[level].hex
+        const opacity = Math.min(0.4, 0.08 + count * 0.04)
         return (
-          <Circle
-            key={`intensity-${c.id}`}
-            center={[c.lat, c.lng]}
-            radius={radius}
-            pathOptions={{
-              color,
-              fillColor: color,
-              fillOpacity: opacity,
-              stroke: false,
-            }}
-          />
+          <React.Fragment key={w.id}>
+            <Polygon
+              positions={w.polygon}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: opacity,
+                weight: 2,
+                dashArray: "6 4",
+              }}
+            >
+              <Popup>
+                <div className="p-1">
+                  <p className="font-semibold text-sm">{w.name}</p>
+                  <p className="text-xs text-muted-foreground">{count} complaints in ward</p>
+                </div>
+              </Popup>
+              <Tooltip direction="center" permanent>
+                <div style={{ fontSize: "11px", fontWeight: 600, color }}>
+                  {w.name.replace("Sector ", "S")} · {count}
+                </div>
+              </Tooltip>
+            </Polygon>
+          </React.Fragment>
         )
       })}
     </>
@@ -192,10 +199,10 @@ function IntensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
 function WardHeatmapLayer() {
   return (
     <>
-      {wards.map(w => {
-        const count = allComplaints.filter(c => {
+      {wards.map((w) => {
+        const count = allComplaints.filter((c) => {
           const dLat = (c.lat - w.center[0]) * 111
-          const dLng = (c.lng - w.center[1]) * 111 * Math.cos(w.center[0] * Math.PI / 180)
+          const dLng = (c.lng - w.center[1]) * 111 * Math.cos((w.center[0] * Math.PI) / 180)
           return Math.sqrt(dLat * dLat + dLng * dLng) * 1000 <= 800
         }).length
         const opacity = Math.min(0.35, 0.08 + count * 0.05)
@@ -227,7 +234,7 @@ function WardHeatmapLayer() {
 function DensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
   return (
     <>
-      {complaints.map(c => {
+      {complaints.map((c) => {
         const color = intensityColor(c.severity)
         const radius = 250 + c.severity * 2
         const opacity = 0.12 + (c.severity / 100) * 0.28
@@ -236,12 +243,7 @@ function DensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
             key={`density-${c.id}`}
             center={[c.lat, c.lng]}
             radius={radius}
-            pathOptions={{
-              color,
-              fillColor: color,
-              fillOpacity: opacity,
-              stroke: false,
-            }}
+            pathOptions={{ color, fillColor: color, fillOpacity: opacity, stroke: false }}
           />
         )
       })}
@@ -251,8 +253,8 @@ function DensityHeatmapLayer({ complaints }: { complaints: Complaint[] }) {
 
 function NearbyLayer({ complaint }: { complaint: Complaint | null }) {
   if (!complaint) return null
-  const nearby = getNearbyComplaints(complaint.lat, complaint.lng, 500).filter(n => n.complaint.id !== complaint.id)
-  const facilities = getNearbyFacilities(complaint.lat, complaint.lng, 1000)
+  const nearby = getNearbyComplaints(complaint.lat, complaint.lng, 500).filter((n) => n.complaint.id !== complaint.id)
+  const nearbyFacilities = getNearbyFacilities(complaint.lat, complaint.lng, 1000)
   return (
     <>
       <Circle
@@ -260,7 +262,7 @@ function NearbyLayer({ complaint }: { complaint: Complaint | null }) {
         radius={500}
         pathOptions={{ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.05, weight: 1, dashArray: "4 4" }}
       />
-      {nearby.map(n => (
+      {nearby.map((n) => (
         <Circle
           key={`near-${n.complaint.id}`}
           center={[n.complaint.lat, n.complaint.lng]}
@@ -268,7 +270,7 @@ function NearbyLayer({ complaint }: { complaint: Complaint | null }) {
           pathOptions={{ color: getMarkerColor(n.complaint.priority), fillColor: getMarkerColor(n.complaint.priority), fillOpacity: 0.3, weight: 2 }}
         />
       ))}
-      {facilities.map(f => (
+      {nearbyFacilities.map((f) => (
         <Circle
           key={`fac-${f.facility.id}`}
           center={[f.facility.lat, f.facility.lng]}
@@ -277,6 +279,114 @@ function NearbyLayer({ complaint }: { complaint: Complaint | null }) {
         />
       ))}
     </>
+  )
+}
+
+function RestrictedZonesLayer() {
+  const zoneColors: Record<string, string> = {
+    restricted: "#dc2626",
+    incident: "#f59e0b",
+    buffer: "#3b82f6",
+  }
+  return (
+    <>
+      {restrictedZones.map((z) => {
+        const color = zoneColors[z.type]
+        return (
+          <Circle
+            key={z.id}
+            center={z.center}
+            radius={z.radius}
+            pathOptions={{ color, fillColor: color, fillOpacity: 0.15, weight: 2, dashArray: "8 4" }}
+          >
+            <Popup>
+              <div className="p-1">
+                <p className="font-semibold text-sm">{z.name}</p>
+                <p className="text-xs text-muted-foreground">Radius: {z.radius} m</p>
+              </div>
+            </Popup>
+          </Circle>
+        )
+      })}
+    </>
+  )
+}
+
+function AnimatedPopup({ complaint, onClose }: { complaint: Complaint; onClose?: () => void }) {
+  const color = getMarkerColor(complaint.priority)
+  const statusMeta: Record<string, string> = {
+    Submitted: "#94a3b8",
+    "Under Review": "#3b82f6",
+    Approved: "#3b82f6",
+    Assigned: "#f59e0b",
+    "In Progress": "#8b5cf6",
+    Resolved: "#22c55e",
+    Rejected: "#94a3b8",
+  }
+  const statusColor = statusMeta[complaint.status] || "#94a3b8"
+  const aiRisk = complaint.severity
+  const aiRiskColor = aiRisk >= 75 ? "#ef4444" : aiRisk >= 50 ? "#f59e0b" : "#22c55e"
+  return (
+    <div className="popup-card" style={{ width: 260, fontFamily: "system-ui", animation: "popup-fade-in 0.3s ease-out" }}>
+      <div className="popup-image-wrap" style={{ position: "relative", height: 120, overflow: "hidden", borderRadius: "8px 8px 0 0", background: "#f1f5f9" }}>
+        <img
+          src={complaint.image}
+          alt={complaint.category}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+        <span style={{ position: "absolute", top: 8, left: 8, fontSize: "10px", padding: "2px 8px", backgroundColor: color, color: "white", borderRadius: "9999px", fontWeight: 700 }}>
+          {complaint.priority}
+        </span>
+        <span style={{ position: "absolute", top: 8, right: 8, fontSize: "10px", padding: "2px 8px", backgroundColor: statusColor, color: "white", borderRadius: "9999px", fontWeight: 600 }}>
+          {complaint.status}
+        </span>
+      </div>
+      <div style={{ padding: "10px 12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <span style={{ fontFamily: "monospace", fontSize: "11px", fontWeight: 700, color: "#475569" }}>{complaint.id}</span>
+          <span style={{ fontSize: "10px", color: "#94a3b8" }}>{complaint.category}</span>
+        </div>
+        <p style={{ fontWeight: 600, fontSize: "13px", lineHeight: "1.3", marginBottom: 8, color: "#1e293b" }}>{complaint.title}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: "11px", color: "#64748b" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>AI Risk</span>
+            <span style={{ fontWeight: 700, color: aiRiskColor }}>
+              {aiRisk >= 75 ? "High" : aiRisk >= 50 ? "Medium" : "Low"} ({aiRisk})
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Officer</span>
+            <span style={{ fontWeight: 600, color: "#334155" }}>{complaint.officer || "Unassigned"}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>ETA</span>
+            <span style={{ fontWeight: 600, color: "#334155" }}>{complaintEta(complaint.priority)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Severity</span>
+            <span style={{ fontWeight: 600, color }}>{complaint.severity}/100</span>
+          </div>
+        </div>
+        <a
+          href={`/tracking/${complaint.id}`}
+          onClick={onClose}
+          style={{
+            display: "block",
+            marginTop: 10,
+            padding: "7px 0",
+            textAlign: "center",
+            borderRadius: 6,
+            backgroundColor: "#4f46e5",
+            color: "white",
+            fontSize: "12px",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          Track Issue
+        </a>
+      </div>
+    </div>
   )
 }
 
@@ -289,6 +399,18 @@ export interface MapComponentProps {
   showFacilities: Record<FacilityType, boolean>
   heatmapMode: "priority" | "density" | "ward"
   showNearby: boolean
+  showWeather?: boolean
+  showTraffic?: boolean
+  showRestrictedZones?: boolean
+  officerRoute?: [number, number][]
+  animatedRoute?: [number, number][]
+  drawing?: {
+    active: boolean
+    mode: "polygon" | "circle" | "select" | "none"
+    shapes: DrawnShapes
+    onShapesChange: (shapes: DrawnShapes) => void
+    zoneType: "restricted" | "incident" | "buffer"
+  }
 }
 
 export function MapComponent({
@@ -300,20 +422,30 @@ export function MapComponent({
   showFacilities,
   heatmapMode,
   showNearby,
+  showWeather = false,
+  showTraffic = false,
+  showRestrictedZones = false,
+  officerRoute = [],
+  animatedRoute = [],
+  drawing,
 }: MapComponentProps) {
   const mapRef = React.useRef<L.Map | null>(null)
   const showMarkers = overlays.markers
   const showCluster = overlays.cluster
   const showHeatmap = overlays.heatmap
 
-  const clusters = React.useMemo(() => {
-    if (!showCluster) return []
-    const c = simpleCluster(complaints, 300)
-    const maxCount = Math.max(...c.map(cl => cl.count), 1)
-    return c.map(cl => ({ ...cl, maxCount }))
-  }, [complaints, showCluster])
+  const clusterIconFn = React.useMemo(() => {
+    return createClusterIconFn(Math.max(complaints.length, 1))
+  }, [complaints.length])
 
-  const visibleFacilities = facilities.filter(f => showFacilities[f.type])
+  const heatPoints = React.useMemo(() => {
+    return complaints.map((c) => {
+      const intensity = c.priority === "Critical" ? 1.0 : c.priority === "High" ? 0.7 : c.priority === "Medium" ? 0.4 : 0.2
+      return [c.lat, c.lng, intensity] as [number, number, number]
+    })
+  }, [complaints])
+
+  const visibleFacilities = facilities.filter((f) => showFacilities[f.type])
   const tileConfig = tileLayerUrls[tileLayer]
 
   return (
@@ -330,26 +462,84 @@ export function MapComponent({
           0% { transform: scale(0.8); opacity: 0.5; }
           100% { transform: scale(1.6); opacity: 0; }
         }
+        @keyframes cluster-pulse {
+          0% { transform: scale(0.9); opacity: 0.4; }
+          100% { transform: scale(1.3); opacity: 0; }
+        }
+        @keyframes popup-fade-in {
+          0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
         .leaflet-popup-content-wrapper { border-radius: 12px; overflow: hidden; }
         .leaflet-popup-content { margin: 0; }
+        .leaflet-tooltip.ward-label { background: transparent; border: none; box-shadow: none; }
       `}</style>
       <ZoomControl position="bottomright" />
-      <TileLayer key={tileLayer} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} />
+      <TileLayer
+        key={tileLayer}
+        url={tileConfig.url}
+        attribution={tileConfig.attribution}
+        maxZoom={tileConfig.maxZoom}
+      />
+
+      {showTraffic && (
+        <TileLayer
+          key="traffic"
+          url={trafficTileUrl}
+          attribution="&copy; Thunderforest"
+          maxZoom={19}
+          subdomains={["a", "b", "c"]}
+          opacity={0.6}
+        />
+      )}
+      {showWeather && (
+        <TileLayer
+          key="weather"
+          url={weatherTileUrl}
+          attribution="&copy; OpenWeatherMap"
+          maxZoom={19}
+          opacity={0.7}
+        />
+      )}
+
       <FlyTo complaint={selectedComplaint} />
 
-      {showHeatmap && heatmapMode === "priority" && <HeatmapLayer complaints={complaints} />}
+      {overlays.ward && <WardLayer />}
+
+      {showHeatmap && heatmapMode === "priority" && (
+        <>
+          <HeatLayer points={heatPoints} radius={40} blur={30} />
+          <PriorityHeatmapLayer complaints={complaints} />
+        </>
+      )}
       {showHeatmap && heatmapMode === "density" && <DensityHeatmapLayer complaints={complaints} />}
       {showHeatmap && heatmapMode === "ward" && <WardHeatmapLayer />}
 
       {showNearby && <NearbyLayer complaint={selectedComplaint} />}
 
-      {visibleFacilities.map(f => (
-        <Marker
-          key={f.id}
-          position={[f.lat, f.lng]}
-          icon={createFacilityIcon(f.type)}
-          zIndexOffset={100}
-        >
+      {showRestrictedZones && <RestrictedZonesLayer />}
+
+      {officerRoute.length >= 2 && <RoutingControl waypoints={officerRoute} color="#4f46e5" />}
+      {animatedRoute.length >= 2 && <AnimatedRoute waypoints={animatedRoute} color="#22c55e" />}
+
+      {drawing && (
+        <>
+          <DrawingTools
+            active={drawing.active}
+            mode={drawing.mode}
+            shapes={drawing.shapes}
+            onShapesChange={drawing.onShapesChange}
+            zoneType={drawing.zoneType}
+          />
+          <DrawnShapesLayer
+            shapes={drawing.shapes}
+            onRemove={(id) => drawing.onShapesChange(drawing.shapes.filter((s) => s.id !== id))}
+          />
+        </>
+      )}
+
+      {visibleFacilities.map((f) => (
+        <Marker key={f.id} position={[f.lat, f.lng]} icon={createFacilityIcon(f.type)} zIndexOffset={100}>
           <Popup>
             <div className="min-w-44 p-2">
               <div className="flex items-center gap-2 mb-1">
@@ -364,114 +554,44 @@ export function MapComponent({
         </Marker>
       ))}
 
-      {showMarkers && !showCluster && complaints.map(complaint => (
+      {showMarkers && !showCluster && complaints.map((complaint) => (
         <Marker
           key={complaint.id}
           position={[complaint.lat, complaint.lng]}
           icon={createComplaintIcon(complaint.priority, complaint.category, selectedComplaint?.id === complaint.id)}
           eventHandlers={{ click: () => setSelectedComplaint(complaint) }}
         >
-          <Popup maxWidth={280} minWidth={220}>
-            <div className="p-1">
-              <div className="relative mb-2 aspect-video overflow-hidden rounded-md bg-muted">
-                <img src={complaint.image} alt={complaint.category} className="size-full object-cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-              <div className="space-y-1.5 px-1 pb-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-semibold">{complaint.id}</span>
-                  <span style={{ fontSize: "10px", padding: "2px 8px", backgroundColor: getMarkerColor(complaint.priority), color: "white", borderRadius: "9999px", fontWeight: 600 }}>
-                    {complaint.priority}
-                  </span>
-                </div>
-                <p className="font-semibold text-sm">{complaint.title}</p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span>{complaint.category}</span>
-                  <span>·</span>
-                  <span>{complaint.location}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{complaint.citizen}</span>
-                  <span>·</span>
-                  <span>{complaint.date}</span>
-                </div>
-                <div className="flex items-center gap-1.5 pt-1">
-                  <span className="text-xs font-medium" style={{ color: getMarkerColor(complaint.priority) }}>
-                    Severity: {complaint.severity}/100
-                  </span>
-                </div>
-                <a
-                  href={`/tracking/${complaint.id}`}
-                  className="mt-1 block rounded-md bg-primary px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-primary/90"
-                >
-                  Track Issue
-                </a>
-              </div>
-            </div>
+          <Popup maxWidth={280} minWidth={260}>
+            <AnimatedPopup complaint={complaint} />
           </Popup>
         </Marker>
       ))}
 
-      {showCluster && clusters.map((cl, i) => (
-        cl.count === 1 ? (
-          <Marker
-            key={`solo-${i}`}
-            position={[cl.lat, cl.lng]}
-            icon={createComplaintIcon(cl.complaints[0].priority, cl.complaints[0].category, selectedComplaint?.id === cl.complaints[0].id)}
-            eventHandlers={{ click: () => setSelectedComplaint(cl.complaints[0]) }}
-          >
-            <Popup maxWidth={280} minWidth={220}>
-              <div className="p-1">
-                <div className="relative mb-2 aspect-video overflow-hidden rounded-md bg-muted">
-                  <img src={cl.complaints[0].image} alt={cl.complaints[0].category} className="size-full object-cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-                <div className="space-y-1.5 px-1 pb-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-semibold">{cl.complaints[0].id}</span>
-                    <span style={{ fontSize: "10px", padding: "2px 8px", backgroundColor: getMarkerColor(cl.complaints[0].priority), color: "white", borderRadius: "9999px", fontWeight: 600 }}>
-                      {cl.complaints[0].priority}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-sm">{cl.complaints[0].title}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span>{cl.complaints[0].category}</span><span>·</span><span>{cl.complaints[0].location}</span>
-                  </div>
-                  <a href={`/tracking/${cl.complaints[0].id}`} className="mt-1 block rounded-md bg-primary px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-primary/90">
-                    Track Issue
-                  </a>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ) : (
-          <Marker
-            key={`cluster-${i}`}
-            position={[cl.lat, cl.lng]}
-            icon={createClusterIcon(cl.count, cl.maxCount)}
-          >
-            <Popup maxWidth={260}>
-              <div className="p-1">
-                <p className="font-semibold text-sm mb-1">{cl.count} complaints in this area</p>
-                <div className="space-y-1">
-                  {cl.complaints.slice(0, 5).map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => setSelectedComplaint(c)}
-                      style={{ display: "block", width: "100%", textAlign: "left", padding: "4px 6px", borderRadius: "4px", border: "none", background: "transparent", cursor: "pointer", fontSize: "12px" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    >
-                      <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{c.id}</span> — {c.title.slice(0, 30)}...
-                    </button>
-                  ))}
-                  {cl.complaints.length > 5 && (
-                    <p className="text-xs text-muted-foreground px-1.5">+{cl.complaints.length - 5} more</p>
-                  )}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        )
-      ))}
+      {showMarkers && showCluster && (
+        <MarkerClusterGroup
+          iconCreateFunction={clusterIconFn}
+          showCoverageOnHover
+          spiderfyOnMaxZoom
+          zoomToBoundsOnClick
+          maxClusterRadius={50}
+          chunkedLoading
+          spiderfyDistanceMultiplier={1.5}
+          polygonOptions={{ color: "#4f46e5", fillColor: "#4f46e5", fillOpacity: 0.1, weight: 2, dashArray: "4 4" }}
+        >
+          {complaints.map((complaint) => (
+            <Marker
+              key={complaint.id}
+              position={[complaint.lat, complaint.lng]}
+              icon={createComplaintIcon(complaint.priority, complaint.category, selectedComplaint?.id === complaint.id)}
+              eventHandlers={{ click: () => setSelectedComplaint(complaint) }}
+            >
+              <Popup maxWidth={280} minWidth={260}>
+                <AnimatedPopup complaint={complaint} />
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
+      )}
     </MapContainer>
   )
 }
