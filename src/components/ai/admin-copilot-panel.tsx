@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Sparkles, Loader as Loader2, TriangleAlert as AlertTriangle, TrendingUp, Users, Building2, ShieldAlert, MapPin, FileText } from "lucide-react"
+import { Sparkles, Loader as Loader2, TriangleAlert as AlertTriangle, TrendingUp, Users, Building2, ShieldAlert, MapPin } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

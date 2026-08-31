@@ -55,7 +55,7 @@ export function generateDeterministicReasoning(params: {
   wardRiskScore: number
   citizenTrust: number
 }): AIReasoningExplanation {
-  const { category, description, priority, similarCount, wardRiskScore, citizenTrust } = params
+  const { category, description, priority, similarCount, wardRiskScore } = params
   const desc = description.toLowerCase()
   const factors: ReasoningFactor[] = []
 

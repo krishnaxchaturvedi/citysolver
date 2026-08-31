@@ -4,7 +4,6 @@ import * as React from "react"
 import { Circle as HelpCircle, Plus, X, Loader as Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { generateFollowUpQuestions, type SmartFollowUp } from "@/lib/llm/follow-ups"
 import type { CategoryKey } from "@/lib/data"
 

@@ -4,7 +4,6 @@
 // from live database data for admin users.
 // ============================================================
 
-import type { CategoryKey } from "@/lib/data"
 import { callLLMWithFallback, type LLMMessage } from "./provider"
 import type { ChatContext } from "./context"
 

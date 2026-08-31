@@ -4,7 +4,6 @@ import * as React from "react"
 import { Sparkles, FileText, MapPin, TriangleAlert as AlertTriangle, Shield, Clock, CircleCheck as CheckCircle2, Loader as Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
 import { generateComplaintSummary, type ComplaintAISummary } from "@/lib/llm/complaint-summary"
 import type { CategoryKey, Priority } from "@/lib/data"
 
