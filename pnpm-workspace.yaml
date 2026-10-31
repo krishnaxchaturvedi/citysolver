@@ -1,8 +1,7 @@
-allowBuilds:
-  sharp: set this to true or false
-
 onlyBuiltDependencies:
   - sharp
+  - esbuild
+  - tesseract.js
 
 overrides:
   hono: 4.12.25

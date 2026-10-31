@@ -70,6 +70,21 @@ export function generateDeterministicResponse(question: string, ctx: ChatContext
     return `Here are your complaints:\n${ctx.complaints.slice(0, 10).map((c) => `• ${c.id}: "${c.title}" — ${c.category} | ${c.priority} | ${c.status}`).join("\n")}`
   }
 
+  // Questions about the currently analyzed photograph
+  if (ctx.imageAnalysis && (q.includes("photograph") || q.includes("photo") || q.includes("image") || q.includes("picture"))) {
+    const image = ctx.imageAnalysis
+    if (q.includes("suitable") || q.includes("evidence") || q.includes("quality")) {
+      return `This photograph is ${image.evidenceScore >= 70 ? "good" : image.evidenceScore >= 40 ? "usable but could be improved" : "not strong enough"} as complaint evidence. Its evidence quality score is ${image.evidenceScore}/100, while the detected issue confidence is ${image.confidence}%.`
+    }
+    if (q.includes("department") || q.includes("handle")) {
+      return `The photograph most likely shows ${image.detectedCategory}. The suggested department is ${image.suggestedDepartment || "General Municipal Services"}.`
+    }
+    if (q.includes("action") || q.includes("should i") || q.includes("recommend")) {
+      return image.recommendedAction || "Add the exact location, severity, and any immediate public safety impact before submitting."
+    }
+    return `The photograph most likely shows ${image.detectedCategory} with ${image.confidence}% confidence. ${image.evidence || "Add a clear description and exact location to help municipal staff verify it."}`
+  }
+
   // Department questions
   if (q.includes("department") || q.includes("who handles")) {
     const deptMap: Record<string, string> = {
@@ -152,6 +167,9 @@ export function getSuggestedQuestions(role: "citizen" | "officer" | "admin"): st
       "How long will my complaint take?",
       "Which complaints are pending?",
       "What should I do if the issue is dangerous?",
+      "What issue is visible in my photograph?",
+      "Is this image suitable as complaint evidence?",
+      "Which department should handle this issue?",
     ]
   }
   if (role === "officer") {

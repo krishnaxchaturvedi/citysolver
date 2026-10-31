@@ -23,7 +23,8 @@ import {
   subscribeToComplaints,
 } from "@/lib/supabase/services"
 import type { Complaint, Officer, Status } from "@/lib/supabase/types"
-import { Search, ListChecks, X, Loader as Loader2 } from "lucide-react"
+import { Search, ListChecks, X, Loader as Loader2, Scan } from "lucide-react"
+import { AdminImageAnalysisPanel } from "@/components/ai/admin-image-analysis-panel"
 import { toast } from "sonner"
 
 const statusOptions: Status[] = ["Submitted", "Under Review", "Approved", "Assigned", "In Progress", "Resolved", "Rejected"]
@@ -228,6 +229,8 @@ function ManageDialog({
           </button>
         </div>
         <div className="space-y-4 p-4">
+          <AdminImageAnalysisPanel complaintId={complaint.id} />
+
           <div>
             <Label htmlFor="officer">Assign Officer</Label>
             <select

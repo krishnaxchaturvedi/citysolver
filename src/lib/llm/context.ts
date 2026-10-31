@@ -42,10 +42,22 @@ export interface ProfileSummary {
   ward?: string
 }
 
+export interface ImageAnalysisSummary {
+  detectedCategory: string
+  confidence: number
+  evidenceScore: number
+  extractedText?: string
+  evidence?: string
+  suggestedDepartment?: string
+  recommendedAction?: string
+  warnings?: string[]
+}
+
 export interface ChatContext {
   role: UserRole
   profile: ProfileSummary
   complaints: ComplaintSummary[]
+  imageAnalysis?: ImageAnalysisSummary
   officers?: OfficerSummary[]
   notifications?: { id: string; type: string; title: string; read: boolean }[]
   stats?: {
@@ -186,10 +198,14 @@ Never expose another citizen's private data. Only reference the user's own compl
           .join("\n")}`
       : ""
 
+  const visionStr = ctx.imageAnalysis
+    ? `Current photograph analysis (user-provided image): category ${ctx.imageAnalysis.detectedCategory} at ${ctx.imageAnalysis.confidence}% confidence; evidence quality ${ctx.imageAnalysis.evidenceScore}/100.${ctx.imageAnalysis.extractedText ? ` OCR text: ${ctx.imageAnalysis.extractedText}` : ""}${ctx.imageAnalysis.evidence ? ` Visual evidence: ${ctx.imageAnalysis.evidence}` : ""}${ctx.imageAnalysis.suggestedDepartment ? ` Suggested department: ${ctx.imageAnalysis.suggestedDepartment}.` : ""}${ctx.imageAnalysis.recommendedAction ? ` Recommended action: ${ctx.imageAnalysis.recommendedAction}.` : ""}${ctx.imageAnalysis.warnings?.length ? ` Warnings: ${ctx.imageAnalysis.warnings.join("; ")}` : ""}`
+    : ""
+
   const notifStr =
     ctx.notifications && ctx.notifications.length > 0
       ? `Recent notifications:\n${ctx.notifications.slice(0, 5).map((n) => `- ${n.title} (${n.read ? "read" : "unread"})`).join("\n")}`
       : ""
 
-  return [base, profileStr, statsStr, complaintsStr, officersStr, notifStr].filter(Boolean).join("\n\n")
+  return [base, profileStr, statsStr, complaintsStr, visionStr, officersStr, notifStr].filter(Boolean).join("\n\n")
 }

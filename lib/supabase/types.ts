@@ -145,6 +145,21 @@ export interface Notification {
   created_at: string
 }
 
+export interface ImageAnalysis {
+  id: string
+  complaint_id: string
+  image_url: string
+  detected_category: string | null
+  confidence_score: number | null
+  alternative_categories: Array<{ category: string; confidence: number }>
+  extracted_text: string | null
+  ocr_confidence: number | null
+  evidence_score: number | null
+  analysis_result: Record<string, unknown>
+  model_provider: string
+  created_at: string
+}
+
 export interface LeaderboardEntry {
   id: string
   full_name: string
