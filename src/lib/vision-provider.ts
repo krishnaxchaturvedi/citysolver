@@ -164,7 +164,7 @@ export async function analyzeImage(
 export async function compressImage(file: File, maxWidth = 1280, quality = 0.7): Promise<File> {
   if (file.size <= 2 * 1024 * 1024) return file // Skip compression for small files
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const reader = new FileReader()
     reader.onload = () => {
       const img = new Image()
@@ -207,7 +207,7 @@ export async function compressImage(file: File, maxWidth = 1280, quality = 0.7):
 
 // Detect duplicate images by comparing perceptual hashes (simplified)
 export async function computeImageHash(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const reader = new FileReader()
     reader.onload = () => {
       const img = new Image()

@@ -1,12 +1,10 @@
 "use client"
 
-import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { FileText, CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
 import type { PerImageAnalysis } from "@/lib/image-analysis"
-import { cn } from "@/lib/utils"
 
 interface OcrCardProps {
   analysis: PerImageAnalysis

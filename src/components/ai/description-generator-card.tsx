@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Sparkles, Check, Edit3, Building2, Wrench } from "lucide-react"
 import type { CombinedAnalysisSummary } from "@/lib/image-analysis"
-import { cn } from "@/lib/utils"
 
 interface DescriptionGeneratorCardProps {
   summary: CombinedAnalysisSummary | null
