@@ -177,24 +177,30 @@ export default function AdminComplaintsPage() {
 
   const hasActiveFilters = search || statusFilter.length > 0 || priorityFilter.length > 0 || wardFilter.length > 0
 
-  const handleApprove = () => {
-    toast.success("Complaint Approved", { description: "The complaint has been approved and sent for assignment." })
-    setIsDrawerOpen(false)
+  const persistComplaintChange = async (payload: Record<string, unknown>, success: string) => {
+    if (!selectedComplaint) return
+    try {
+      const response = await fetch(`/api/admin/complaints/${encodeURIComponent(selectedComplaint.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Unable to update complaint.")
+      toast.success(success)
+      setIsDrawerOpen(false)
+      window.location.reload()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update complaint.")
+    }
   }
 
-  const handleReject = () => {
-    toast.error("Complaint Rejected", { description: "The complaint has been rejected." })
-    setIsDrawerOpen(false)
-  }
-
-  const handleAssign = (officer: typeof officers[0]) => {
-    toast.success("Complaint Assigned", { description: `Assigned to ${officer.name}` })
-    setIsDrawerOpen(false)
-  }
-
+  const handleApprove = () => persistComplaintChange({ status: "Approved" }, "Complaint approved.")
+  const handleReject = () => persistComplaintChange({ status: "Rejected" }, "Complaint rejected.")
+  const handleAssign = (officer: typeof officers[0]) => persistComplaintChange({ status: "Assigned", note: `Assigned to ${officer.name} (${officer.department}).` }, `Assignment recorded for ${officer.name}; connect the officer directory to assign a real account.`)
   const handleAddNote = () => {
     if (!internalNote.trim()) return
-    toast.success("Note Added", { description: "Internal note has been added." })
+    persistComplaintChange({ note: internalNote.trim() }, "Internal note saved.")
     setInternalNote("")
   }
 
