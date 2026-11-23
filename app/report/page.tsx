@@ -307,17 +307,30 @@ export default function ReportIssuePage() {
 
     setIsSubmitting(true)
 
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    const ticketId = `CTS-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`
-
-    toast.success("Issue Reported Successfully!", {
-      description: `Your ticket ID is ${ticketId}. Redirecting to tracking...`
-    })
-
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/complaints", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: formData.category,
+          description: formData.description,
+          location: formData.location,
+          landmark: formData.landmark,
+          latitude: coordinates?.lat,
+          longitude: coordinates?.lng,
+          imageDataUrl: image,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Unable to submit complaint.")
+      const ticketId = result.complaint.ticket_id
+      toast.success("Complaint submitted", { description: `Your ticket ID is ${ticketId}.` })
       router.push(`/tracking/${ticketId}`)
-    }, 1000)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to submit complaint.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
