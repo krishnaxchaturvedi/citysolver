@@ -49,7 +49,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { currentUser, complaints, type Status, type Priority, type Complaint, categoryBreakdown } from "@/lib/data"
+import { currentUser, type Status, type Priority, type Complaint, categoryBreakdown } from "@/lib/data"
 
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +90,35 @@ export default function AdminComplaintsPage() {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [internalNote, setInternalNote] = React.useState("")
   const [officers, setOfficers] = React.useState<OfficerOption[]>([])
+  const [complaintRows, setComplaintRows] = React.useState<Complaint[]>([])
+  const [loadingComplaints, setLoadingComplaints] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch("/api/complaints")
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "Unable to load complaints.")
+        setComplaintRows((result.complaints || []).map((row: Record<string, unknown>) => ({
+          id: String(row.ticket_id),
+          category: row.category as Complaint["category"],
+          title: String(row.title || row.category),
+          description: String(row.description || ""),
+          priority: row.priority as Priority,
+          status: row.status as Status,
+          location: String(row.location || ""),
+          lat: Number(row.latitude || 0),
+          lng: Number(row.longitude || 0),
+          date: String(row.created_at || "").slice(0, 10),
+          citizen: String(row.citizen_id || ""),
+          officer: null,
+          image: "/placeholder-user.jpg",
+          severity: Number(row.risk_score || 0),
+          coins: 0,
+        })))
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : "Unable to load complaints."))
+      .finally(() => setLoadingComplaints(false))
+  }, [])
 
   React.useEffect(() => {
     fetch("/api/admin/officers")
@@ -129,7 +158,7 @@ export default function AdminComplaintsPage() {
   }
 
   const filteredComplaints = React.useMemo(() => {
-    let result = [...complaints]
+    let result = [...complaintRows]
 
     if (search) {
       const query = search.toLowerCase()
@@ -180,7 +209,7 @@ export default function AdminComplaintsPage() {
     })
 
     return result
-  }, [search, statusFilter, priorityFilter, wardFilter, sortBy])
+  }, [complaintRows, search, statusFilter, priorityFilter, wardFilter, sortBy])
 
   const hasActiveFilters = search || statusFilter.length > 0 || priorityFilter.length > 0 || wardFilter.length > 0
 
