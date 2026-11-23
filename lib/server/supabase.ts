@@ -72,13 +72,13 @@ export async function supabaseRest(path: string, options: RequestInit = {}) {
 export async function requireUser() {
   const token = await getAccessToken()
   if (!token) throw new ApiError(401, "Please sign in to continue.")
-  const user = await supabaseAuth("user", undefined).catch(async () => {
-    const { url, key } = supabaseConfig()
-    const response = await fetch(`${url}/auth/v1/user`, { headers: { apikey: key, Authorization: `Bearer ${token}` }, cache: "no-store" })
-    const data = await response.json().catch(() => ({}))
-    if (!response.ok) throw new ApiError(401, "Your session has expired. Please sign in again.")
-    return data
+  const { url, key } = supabaseConfig()
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: key, Authorization: `Bearer ${token}` },
+    cache: "no-store",
   })
+  const user = await response.json().catch(() => ({}))
+  if (!response.ok || !user.id) throw new ApiError(401, "Your session has expired. Please sign in again.")
   const profiles = await supabaseRest(`profiles?id=eq.${encodeURIComponent(user.id)}&select=id,full_name,role,phone`)
   const profile = Array.isArray(profiles) ? profiles[0] : null
   if (!profile) throw new ApiError(403, "Your profile is not available. Contact an administrator.")
