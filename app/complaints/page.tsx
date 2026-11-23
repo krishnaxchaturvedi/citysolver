@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/table"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
-import { currentUser, complaints, type Status, type Priority, type Complaint } from "@/lib/data"
+import { currentUser, type Status, type Priority, type Complaint } from "@/lib/data"
 
 type SortOption = "newest" | "oldest" | "priority-high" | "priority-low" | "status"
 
@@ -56,6 +56,35 @@ export default function MyComplaintsPage() {
   const [priorityFilter, setPriorityFilter] = React.useState<Priority[]>([])
   const [sortBy, setSortBy] = React.useState<SortOption>("newest")
   const [viewMode, setViewMode] = React.useState<"table" | "cards">("table")
+  const [complaintRows, setComplaintRows] = React.useState<Complaint[]>([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch("/api/complaints")
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "Unable to load your complaints.")
+        setComplaintRows((result.complaints || []).map((row: Record<string, unknown>) => ({
+          id: String(row.ticket_id),
+          category: row.category as Complaint["category"],
+          title: String(row.title || row.category),
+          description: String(row.description || ""),
+          priority: row.priority as Priority,
+          status: row.status as Status,
+          location: String(row.location || ""),
+          lat: Number(row.latitude || 0),
+          lng: Number(row.longitude || 0),
+          date: String(row.created_at || "").slice(0, 10),
+          citizen: "You",
+          officer: null,
+          image: "/placeholder-user.jpg",
+          severity: Number(row.risk_score || 0),
+          coins: 0,
+        })))
+      })
+      .catch(error => console.error(error))
+      .finally(() => setLoading(false))
+  }, [])
 
   const toggleStatus = (status: Status) => {
     setStatusFilter(prev =>
@@ -80,7 +109,7 @@ export default function MyComplaintsPage() {
   }
 
   const filteredComplaints = React.useMemo(() => {
-    let result = [...complaints]
+    let result = [...complaintRows]
 
     if (search) {
       const query = search.toLowerCase()
@@ -127,7 +156,7 @@ export default function MyComplaintsPage() {
     })
 
     return result
-  }, [search, statusFilter, priorityFilter, sortBy])
+  }, [complaintRows, search, statusFilter, priorityFilter, sortBy])
 
   const hasActiveFilters = search || statusFilter.length > 0 || priorityFilter.length > 0
 
@@ -273,7 +302,9 @@ export default function MyComplaintsPage() {
 
         <Card>
           <CardContent className="p-0">
-            {filteredComplaints.length === 0 ? (
+            {loading ? (
+                <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Loading your complaints…</TableCell></TableRow>
+              ) : filteredComplaints.length === 0 ? (
               <Empty className="min-h-64">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">

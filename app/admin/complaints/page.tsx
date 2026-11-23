@@ -49,7 +49,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { currentUser, complaints, type Status, type Priority, type Complaint, categoryBreakdown } from "@/lib/data"
+import { currentUser, type Status, type Priority, type Complaint, categoryBreakdown } from "@/lib/data"
 
 export const dynamic = 'force-dynamic'
 
@@ -59,13 +59,7 @@ const statusOptions: Status[] = ["Submitted", "Under Review", "Approved", "Assig
 const priorityOptions: Priority[] = ["Critical", "High", "Medium", "Low"]
 const wardOptions = ["Sector 14", "Sector 9", "Sector 22", "Sector 18", "Sector 7", "Sector 5", "Sector 12", "Sector 31"]
 
-const officers = [
-  { name: "Eng. R. Mehta", department: "Roads & Infrastructure", workload: 12 },
-  { name: "San. T. Rao", department: "Sanitation", workload: 8 },
-  { name: "Eng. K. Singh", department: "Water Works", workload: 15 },
-  { name: "Elec. P. Verma", department: "Electrical", workload: 6 },
-  { name: "Off. S. Kumar", department: "Public Safety", workload: 4 },
-]
+type OfficerOption = { id: string; name: string; department: string; workload: number }
 
 interface TimelineEvent {
   date: string
@@ -95,6 +89,48 @@ export default function AdminComplaintsPage() {
   const [selectedComplaint, setSelectedComplaint] = React.useState<Complaint | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [internalNote, setInternalNote] = React.useState("")
+  const [officers, setOfficers] = React.useState<OfficerOption[]>([])
+  const [complaintRows, setComplaintRows] = React.useState<Complaint[]>([])
+  const [loadingComplaints, setLoadingComplaints] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch("/api/complaints")
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "Unable to load complaints.")
+        setComplaintRows((result.complaints || []).map((row: Record<string, unknown>) => ({
+          id: String(row.ticket_id),
+          category: row.category as Complaint["category"],
+          title: String(row.title || row.category),
+          description: String(row.description || ""),
+          priority: row.priority as Priority,
+          status: row.status as Status,
+          location: String(row.location || ""),
+          lat: Number(row.latitude || 0),
+          lng: Number(row.longitude || 0),
+          date: String(row.created_at || "").slice(0, 10),
+          citizen: String(row.citizen_id || ""),
+          officer: null,
+          image: "/placeholder-user.jpg",
+          severity: Number(row.risk_score || 0),
+          coins: 0,
+        })))
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : "Unable to load complaints."))
+      .finally(() => setLoadingComplaints(false))
+  }, [])
+
+  React.useEffect(() => {
+    fetch("/api/admin/officers")
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "Unable to load officer directory.")
+        setOfficers((result.officers || []).map((item: { id: string; full_name: string; phone?: string }) => ({
+          id: item.id, name: item.full_name, department: item.phone || "Municipal staff", workload: 0,
+        })))
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : "Unable to load officers."))
+  }, [])
 
   const toggleStatus = (status: Status) => {
     setStatusFilter(prev =>
@@ -122,7 +158,7 @@ export default function AdminComplaintsPage() {
   }
 
   const filteredComplaints = React.useMemo(() => {
-    let result = [...complaints]
+    let result = [...complaintRows]
 
     if (search) {
       const query = search.toLowerCase()
@@ -173,28 +209,34 @@ export default function AdminComplaintsPage() {
     })
 
     return result
-  }, [search, statusFilter, priorityFilter, wardFilter, sortBy])
+  }, [complaintRows, search, statusFilter, priorityFilter, wardFilter, sortBy])
 
   const hasActiveFilters = search || statusFilter.length > 0 || priorityFilter.length > 0 || wardFilter.length > 0
 
-  const handleApprove = () => {
-    toast.success("Complaint Approved", { description: "The complaint has been approved and sent for assignment." })
-    setIsDrawerOpen(false)
+  const persistComplaintChange = async (payload: Record<string, unknown>, success: string) => {
+    if (!selectedComplaint) return
+    try {
+      const response = await fetch(`/api/admin/complaints/${encodeURIComponent(selectedComplaint.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Unable to update complaint.")
+      toast.success(success)
+      setIsDrawerOpen(false)
+      window.location.reload()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update complaint.")
+    }
   }
 
-  const handleReject = () => {
-    toast.error("Complaint Rejected", { description: "The complaint has been rejected." })
-    setIsDrawerOpen(false)
-  }
-
-  const handleAssign = (officer: typeof officers[0]) => {
-    toast.success("Complaint Assigned", { description: `Assigned to ${officer.name}` })
-    setIsDrawerOpen(false)
-  }
-
+  const handleApprove = () => persistComplaintChange({ status: "Approved" }, "Complaint approved.")
+  const handleReject = () => persistComplaintChange({ status: "Rejected" }, "Complaint rejected.")
+  const handleAssign = (officer: OfficerOption) => persistComplaintChange({ status: "Assigned", assigned_officer_id: officer.id, note: `Assigned to ${officer.name}.` }, `Complaint assigned to ${officer.name}.`)
   const handleAddNote = () => {
     if (!internalNote.trim()) return
-    toast.success("Note Added", { description: "Internal note has been added." })
+    persistComplaintChange({ note: internalNote.trim() }, "Internal note saved.")
     setInternalNote("")
   }
 
@@ -539,7 +581,7 @@ export default function AdminComplaintsPage() {
                         </div>
                       </div>
                     ) : (
-                      <Select onValueChange={(v) => handleAssign(officers.find(o => o.name === v)!)}>
+                      <Select onValueChange={(v) => { const officer = officers.find(o => o.id === v); if (officer) handleAssign(officer) }}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Assign to officer..." />
                         </SelectTrigger>

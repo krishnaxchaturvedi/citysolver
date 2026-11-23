@@ -5,14 +5,11 @@ import {
   FileText,
   Gauge,
   LayoutDashboard,
-  ListChecks,
   Map,
   Medal,
   PlusCircle,
-  Settings,
   Trophy,
   User,
-  Users,
   type LucideIcon,
 } from "lucide-react"
 
@@ -37,8 +34,5 @@ export const citizenNav: NavItem[] = [
 export const adminNav: NavItem[] = [
   { title: "Overview", href: "/admin", icon: Gauge },
   { title: "Complaints", href: "/admin/complaints", icon: FileText },
-  { title: "Assignments", href: "/admin/assignments", icon: ListChecks },
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { title: "Users", href: "/admin/users", icon: Users },
-  { title: "Settings", href: "/admin/settings", icon: Settings },
 ]

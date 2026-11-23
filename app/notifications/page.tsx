@@ -36,10 +36,26 @@ const typeConfig: Record<NotificationItem["type"], { icon: React.ElementType; co
 const filterTypes: NotificationItem["type"][] = ["approved", "assigned", "resolved", "coins", "review"]
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = React.useState<NotificationItem[]>(initialNotifications)
+  const [notifications, setNotifications] = React.useState<NotificationItem[]>([])
   const [typeFilter, setTypeFilter] = React.useState<NotificationItem["type"][]>([])
   const [readFilter, setReadFilter] = React.useState<"all" | "read" | "unread">("all")
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
+
+  React.useEffect(() => {
+    let active = true
+    fetch("/api/notifications").then(async response => {
+      if (!response.ok) throw new Error("Unable to load notifications")
+      return response.json()
+    }).then(({ notifications: rows }) => {
+      if (!active) return
+      setNotifications((rows || []).map((row: { id: string; title: string; message: string; read_at: string | null; created_at: string }) => ({
+        id: row.id, title: row.title, message: row.message, read: Boolean(row.read_at), time: new Date(row.created_at).toLocaleString(),
+        type: /coin|reward/i.test(row.title) ? "coins" : /assign/i.test(row.title) ? "assigned" : /resolv/i.test(row.title) ? "resolved" : /approv/i.test(row.title) ? "approved" : "review",
+        ticket: row.message.match(/CS-\\d{4}-[A-Z0-9]+/)?.[0],
+      })))
+    }).catch(() => toast.error("Could not load notifications"))
+    return () => { active = false }
+  }, [])
 
   const toggleType = (type: NotificationItem["type"]) => {
     setTypeFilter(prev =>
@@ -68,20 +84,30 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    )
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+      if (!response.ok) throw new Error("Update failed")
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    } catch { toast.error("Could not update notification") }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-    toast.success("All notifications marked as read")
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mark_all: true }) })
+      if (!response.ok) throw new Error("Update failed")
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      toast.success("All notifications marked as read")
+    } catch { toast.error("Could not update notifications") }
   }
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    toast.success("Notification deleted")
+  const deleteNotification = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+      if (!response.ok) throw new Error("Delete failed")
+      setNotifications(prev => prev.filter(n => n.id !== id))
+      toast.success("Notification deleted")
+    } catch { toast.error("Could not delete notification") }
   }
 
   const clearFilters = () => {

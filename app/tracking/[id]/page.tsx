@@ -97,7 +97,53 @@ export default function TrackComplaintPage() {
   const router = useRouter()
   const ticketId = params.id as string
 
-  const complaint = complaints.find(c => c.id === ticketId)
+  const [complaint, setComplaint] = React.useState<Complaint | null>(null)
+  const [timeline, setTimeline] = React.useState<TimelineEvent[]>([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    if (!ticketId) return
+    fetch(`/api/complaints/${encodeURIComponent(ticketId)}`)
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "Complaint not found.")
+        const row = result.complaint
+        setComplaint({
+          id: String(row.ticket_id),
+          category: row.category,
+          title: String(row.title || row.category),
+          description: String(row.description || ""),
+          priority: row.priority,
+          status: row.status,
+          location: String(row.location || ""),
+          lat: Number(row.latitude || 0),
+          lng: Number(row.longitude || 0),
+          date: String(row.created_at || "").slice(0, 10),
+          citizen: "You",
+          officer: null,
+          image: "/placeholder-user.jpg",
+          severity: Number(row.risk_score || 0),
+          coins: 0,
+        })
+        const events = Array.isArray(row.complaint_events) ? row.complaint_events : []
+        setTimeline(events.map((event: Record<string, unknown>) => {
+          const date = new Date(String(event.created_at))
+          return {
+            status: event.status as Status,
+            date: date.toLocaleDateString(),
+            time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            comments: typeof event.note === "string" ? event.note : undefined,
+            completed: true,
+          }
+        }))
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : "Unable to load complaint."))
+      .finally(() => setLoading(false))
+  }, [ticketId])
+
+  if (loading) {
+    return <DashboardShell items={citizenNav} label="Citizen Portal" title="Track Complaint"><Card><CardContent className="py-12 text-center text-muted-foreground">Loading complaint…</CardContent></Card></DashboardShell>
+  }
 
   if (!complaint) {
     return (
@@ -129,7 +175,6 @@ export default function TrackComplaintPage() {
     )
   }
 
-  const timeline = generateTimeline(complaint)
   const progress = getProgressPercentage(complaint.status)
 
   const handleShare = async () => {

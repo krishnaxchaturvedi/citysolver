@@ -40,13 +40,30 @@ export default function ProfilePage() {
   })
   const [isSaving, setIsSaving] = React.useState(false)
 
+  React.useEffect(() => {
+    let active = true
+    fetch("/api/profile").then(async response => {
+      if (!response.ok) throw new Error("Unable to load profile")
+      return response.json()
+    }).then(({ profile }) => {
+      if (!active || !profile) return
+      setFormData({ name: profile.full_name || "", email: currentUser.email, phone: profile.phone || "", city: profile.city || "", state: profile.state || "" })
+    }).catch(() => toast.error("Could not load your saved profile"))
+    return () => { active = false }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    setIsEditing(false)
-    toast.success("Profile updated successfully")
+    try {
+      const response = await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ full_name: formData.name, phone: formData.phone, city: formData.city, state: formData.state }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Profile update failed")
+      setIsEditing(false)
+      toast.success("Profile updated successfully")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Profile update failed")
+    } finally { setIsSaving(false) }
   }
 
   const resolvedCount = complaints.filter(c => c.citizen === currentUser.name && c.status === "Resolved").length
