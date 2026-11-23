@@ -59,13 +59,7 @@ const statusOptions: Status[] = ["Submitted", "Under Review", "Approved", "Assig
 const priorityOptions: Priority[] = ["Critical", "High", "Medium", "Low"]
 const wardOptions = ["Sector 14", "Sector 9", "Sector 22", "Sector 18", "Sector 7", "Sector 5", "Sector 12", "Sector 31"]
 
-const officers = [
-  { name: "Eng. R. Mehta", department: "Roads & Infrastructure", workload: 12 },
-  { name: "San. T. Rao", department: "Sanitation", workload: 8 },
-  { name: "Eng. K. Singh", department: "Water Works", workload: 15 },
-  { name: "Elec. P. Verma", department: "Electrical", workload: 6 },
-  { name: "Off. S. Kumar", department: "Public Safety", workload: 4 },
-]
+type OfficerOption = { id: string; name: string; department: string; workload: number }
 
 interface TimelineEvent {
   date: string
@@ -95,6 +89,19 @@ export default function AdminComplaintsPage() {
   const [selectedComplaint, setSelectedComplaint] = React.useState<Complaint | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [internalNote, setInternalNote] = React.useState("")
+  const [officers, setOfficers] = React.useState<OfficerOption[]>([])
+
+  React.useEffect(() => {
+    fetch("/api/admin/officers")
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || "Unable to load officer directory.")
+        setOfficers((result.officers || []).map((item: { id: string; full_name: string; phone?: string }) => ({
+          id: item.id, name: item.full_name, department: item.phone || "Municipal staff", workload: 0,
+        })))
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : "Unable to load officers."))
+  }, [])
 
   const toggleStatus = (status: Status) => {
     setStatusFilter(prev =>
@@ -197,7 +204,7 @@ export default function AdminComplaintsPage() {
 
   const handleApprove = () => persistComplaintChange({ status: "Approved" }, "Complaint approved.")
   const handleReject = () => persistComplaintChange({ status: "Rejected" }, "Complaint rejected.")
-  const handleAssign = (officer: typeof officers[0]) => persistComplaintChange({ status: "Assigned", note: `Assigned to ${officer.name} (${officer.department}).` }, `Assignment recorded for ${officer.name}; connect the officer directory to assign a real account.`)
+  const handleAssign = (officer: OfficerOption) => persistComplaintChange({ status: "Assigned", assigned_officer_id: officer.id, note: `Assigned to ${officer.name}.` }, `Complaint assigned to ${officer.name}.`)
   const handleAddNote = () => {
     if (!internalNote.trim()) return
     persistComplaintChange({ note: internalNote.trim() }, "Internal note saved.")
@@ -545,7 +552,7 @@ export default function AdminComplaintsPage() {
                         </div>
                       </div>
                     ) : (
-                      <Select onValueChange={(v) => handleAssign(officers.find(o => o.name === v)!)}>
+                      <Select onValueChange={(v) => { const officer = officers.find(o => o.id === v); if (officer) handleAssign(officer) }}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Assign to officer..." />
                         </SelectTrigger>
