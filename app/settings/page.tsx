@@ -64,17 +64,18 @@ export default function SettingsPage() {
       return response.json()
     }).then(({ profile }) => {
       if (!active || !profile?.preferences) return
-      setSettings(prev => ({ ...prev, ...profile.preferences }))
+      setSettings(prev => ({ ...prev, ...profile.preferences, emailNotifications: profile.preferences.emailUpdates ?? prev.emailNotifications, pushNotifications: profile.preferences.pushUpdates ?? prev.pushNotifications }))
     }).catch(() => toast.error("Could not load saved preferences"))
     return () => { active = false }
   }, [])
 
   const updateSetting = async (key: string, value: boolean | string) => {
     setSettings(prev => ({ ...prev, [key]: value }))
+    const preferenceKey = key === "emailNotifications" ? "emailUpdates" : key === "pushNotifications" ? "pushUpdates" : key
     const persistedKeys = ["emailUpdates","pushUpdates","weeklyDigest","marketingEmails","publicProfile","showOnLeaderboard","shareLocation","screenReaderOptimized","keyboardNavigation","largeText"]
-    if (persistedKeys.includes(key)) {
+    if (persistedKeys.includes(preferenceKey)) {
       try {
-        const response = await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preferences: { [key]: value } }) })
+        const response = await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preferences: { [preferenceKey]: value } }) })
         if (!response.ok) throw new Error("Save failed")
         toast.success("Preference saved")
       } catch {
