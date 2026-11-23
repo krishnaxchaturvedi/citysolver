@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -15,7 +14,6 @@ export const metadata: Metadata = {
   title: 'CitySolver — Building Better Cities Together',
   description:
     'Crowdsourced civic issue reporting and resolution platform. Report potholes, garbage, broken streetlights and more, track resolutions, and earn rewards for improving your city.',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
@@ -64,7 +62,6 @@ export default function RootLayout({
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )
