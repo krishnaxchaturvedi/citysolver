@@ -51,3 +51,5 @@ with check (
   id = auth.uid()
   and role = public.current_citysolver_role()
 );
+
+create policy "users delete own notifications" on public.notifications for delete to authenticated using (user_id = auth.uid());
