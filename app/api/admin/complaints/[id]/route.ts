@@ -39,13 +39,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
         body: JSON.stringify({ complaint_id: complaint.id, actor_id: user.id, status, note }),
       })
     }
-    if (status === "Resolved") {
-      const amount = ({ Critical: 150, High: 90, Medium: 60, Low: 30 } as Record<string, number>)[complaint.priority] || 30
-      await supabaseRest("reward_ledger", {
-        method: "POST",
-        body: JSON.stringify({ citizen_id: complaint.citizen_id, complaint_id: complaint.id, amount, reason: "Complaint resolved" }),
-      })
-    }
+    // The database trigger awards resolution coins exactly once and creates notifications.
     return Response.json({ complaint })
   } catch (error) {
     return jsonError(error)
