@@ -57,9 +57,32 @@ export default function SettingsPage() {
     sessionTimeout: "30",
   })
 
-  const updateSetting = (key: string, value: boolean | string) => {
+  React.useEffect(() => {
+    let active = true
+    fetch("/api/profile").then(async response => {
+      if (!response.ok) throw new Error("Unable to load preferences")
+      return response.json()
+    }).then(({ profile }) => {
+      if (!active || !profile?.preferences) return
+      setSettings(prev => ({ ...prev, ...profile.preferences }))
+    }).catch(() => toast.error("Could not load saved preferences"))
+    return () => { active = false }
+  }, [])
+
+  const updateSetting = async (key: string, value: boolean | string) => {
     setSettings(prev => ({ ...prev, [key]: value }))
-    toast.success("Setting updated")
+    const persistedKeys = ["emailUpdates","pushUpdates","weeklyDigest","marketingEmails","publicProfile","showOnLeaderboard","shareLocation","screenReaderOptimized","keyboardNavigation","largeText"]
+    if (persistedKeys.includes(key)) {
+      try {
+        const response = await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preferences: { [key]: value } }) })
+        if (!response.ok) throw new Error("Save failed")
+        toast.success("Preference saved")
+      } catch {
+        toast.error("Could not save preference")
+      }
+    } else {
+      toast.success("Setting updated for this session")
+    }
   }
 
   return (
