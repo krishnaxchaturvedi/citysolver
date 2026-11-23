@@ -17,9 +17,11 @@ Never commit `.env.local`, a service-role key, database password, or JWT secret.
 
 ## 3. Create tables and storage bucket
 
-Open the Supabase SQL Editor and run the complete migration:
+Open the Supabase SQL Editor and run these migrations in numerical order:
 
-`supabase/migrations/202611240001_initial_citysolver.sql`
+1. `supabase/migrations/202611240001_initial_citysolver.sql`
+2. `supabase/migrations/202611240002_profile_policy_fix.sql`
+3. `supabase/migrations/202611240003_notifications_rewards_profiles.sql`
 
 It creates profiles, complaints, complaint events, reward ledger, notifications, RLS policies and a private evidence bucket.
 
@@ -46,8 +48,10 @@ Never provide a public API endpoint for self-promotion. Create officer accounts 
 - `GET, POST /api/complaints`
 - `GET /api/complaints/:ticketId`
 - `PATCH /api/admin/complaints/:ticketId`
+- `GET, PATCH, DELETE /api/notifications`
+- `GET, PATCH /api/profile`
 
-Complaint submission validates GPS coordinates and description, uploads optional evidence to the private bucket, creates a ticket and writes a first timeline event. Staff changes are protected by the profile role and database RLS.
+Complaint submission validates GPS coordinates and description, uploads optional evidence to the private bucket, creates a ticket and writes a first timeline event. Staff changes are protected by the profile role and database RLS. Status changes create citizen notifications in the database; resolving a complaint awards coins exactly once through a database trigger. Citizen profile details and notification read/delete actions are persisted.
 
 ## Important scope
 
