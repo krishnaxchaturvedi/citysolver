@@ -15,11 +15,26 @@ export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
-    toast.success("Welcome back!", { description: "Redirecting to your dashboard." })
-    setTimeout(() => router.push("/dashboard"), 900)
+    const form = new FormData(e.currentTarget)
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Unable to sign in.")
+      toast.success("Welcome back!")
+      router.push("/dashboard")
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to sign in.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -39,7 +54,7 @@ export default function LoginPage() {
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input id="email" type="email" placeholder="you@email.com" required />
+            <Input id="email" name="email" type="email" placeholder="you@email.com" required />
           </Field>
           <Field>
             <div className="flex items-center justify-between">
@@ -51,7 +66,7 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <Input id="password" type="password" placeholder="••••••••" required />
+            <Input id="password" name="password" type="password" placeholder="••••••••" required />
           </Field>
         </FieldGroup>
         <Button type="submit" disabled={loading}>
